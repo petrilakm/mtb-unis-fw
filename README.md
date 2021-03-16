@@ -1,3 +1,3 @@
-# MTB-Code
+# MTB-UNI v4 Firmware
 
-Tento repozitář je věnován tvorbě programu do desky vyvinuté v projektu MTB-Electric
+TODO
