@@ -32,6 +32,7 @@ static inline void init() {
 	WDTCR |= 1 << WDE;  // watchdog enable
 	WDTCR |= WDP2; // ~250 ms timeout
 
+	io_init();
 	// Setup timer 0 TODO
 	/*TCCR0A |= 1 << WGM01; // CTC mode
 	TCCR0B |= 1 << CS01; // no prescaler

@@ -45,5 +45,9 @@ uint16_t io_get_inputs_raw();
 
 void io_set_output_raw(uint8_t onum, bool state);
 void io_set_outputs_raw(uint16_t state);
+void io_set_outputs_raw_mask(uint16_t state, uint16_t mask);
+uint16_t io_get_outputs_raw();
+bool io_get_output_raw(uint8_t onum);
+
 
 #endif
