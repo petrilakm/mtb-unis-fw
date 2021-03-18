@@ -24,24 +24,33 @@ int main() {
 	init();
 
 	while (true) {
-		wdt_reset();
+		// wdt_reset();
 	}
 }
 
 static inline void init() {
-	WDTCR |= 1 << WDE;  // watchdog enable
-	WDTCR |= WDP2; // ~250 ms timeout
+	// WDTCR |= 1 << WDE;  // watchdog enable
+	// WDTCR |= WDP2; // ~250 ms timeout
 
 	io_init();
-	// Setup timer 0 TODO
-	/*TCCR0A |= 1 << WGM01; // CTC mode
-	TCCR0B |= 1 << CS01; // no prescaler
-	TIMSK |= 1 << OCIE0A; // enable compare match A
-	OCR0A = 99;*/
+
+	// Setup timer 1 @ 10 kHz (period 100 us)
+	TCCR1B = (1 << WGM12) | (1 << CS10); // CTC mode, no prescaler
+	TIMSK |= (1 << OCIE1A); // enable compare match interrupt
+	OCR1A = 1473;
+
+	// Setup timer 3 @ 1 kHz (period 1 ms)
+	TCCR3B = (1 << WGM12) | (1 << CS10); // CTC mode, no prescaler
+	ETIMSK |= (1 << OCIE3A); // enable compare match interrupt
+	OCR3A = 14730;
 
 	sei(); // enable interrupts globally
 }
 
-/*ISR(TIM0_COMPA_vect) {
-	// Timer 0 @ 10 kHz (period 100 us)
-}*/
+ISR(TIMER1_COMPA_vect) {
+	// Timer 1 @ 10 kHz (period 100 us)
+}
+
+ISR(TIMER3_COMPA_vect) {
+	// Timer 3 @ 1 kHz (period 1 ms)
+}
