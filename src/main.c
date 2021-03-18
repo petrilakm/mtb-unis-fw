@@ -9,6 +9,7 @@
 
 #include "io.h"
 #include "scom.h"
+#include "outputs.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -23,6 +24,9 @@ static inline void init();
 
 int main() {
 	init();
+
+	uint8_t test[] = {0x00, 0x03, 0x00, 0x05, 0x48, 0x43};
+	outputs_set(test, sizeof(test)/sizeof(*test));
 
 	while (true) {
 		_delay_ms(10);
@@ -57,4 +61,5 @@ ISR(TIMER1_COMPA_vect) {
 ISR(TIMER3_COMPA_vect) {
 	// Timer 3 @ 100 Hz (period 10 ms)
 	scom_update();
+	outputs_update();
 }
