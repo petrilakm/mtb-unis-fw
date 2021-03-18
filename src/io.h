@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define NO_INPUTS 16
 #define INPUT_0 PINF7
 #define INPUT_1 PINF6
 #define INPUT_2 PINF5
@@ -21,6 +22,7 @@
 #define INPUT_14 PINB4
 #define INPUT_15 PINB5
 
+#define NO_OUTPUTS 16
 #define OUTPUT_0 PIND7
 #define OUTPUT_1 PIND6
 #define OUTPUT_2 PIND5

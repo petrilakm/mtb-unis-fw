@@ -35,6 +35,7 @@ void io_set_outputs_raw(uint16_t state) {
 }
 
 void io_set_outputs_raw_mask(uint16_t state, uint16_t mask) {
+	state = (state & mask) | (io_get_outputs_raw() & (~mask));
 	uint8_t low = state & 0xFF;
 	uint8_t high = (state >> 8) & 0xFF;
 	PORTD = bit_reverse(low);

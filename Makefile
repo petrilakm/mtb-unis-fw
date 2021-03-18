@@ -87,7 +87,7 @@ OBJDIR = obj
 
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = src/main.c src/io.c
+SRC = src/main.c src/io.c src/scom.c
 
 # List C++ source files here. (C dependencies are automatically generated.)
 # CPPSRC =
