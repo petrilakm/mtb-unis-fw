@@ -33,7 +33,8 @@ int main() {
 			config_write = false;
 		}
 
-		_delay_ms(10);
+		io_led_red(!io_led_red_state());
+		_delay_ms(100);
 		// wdt_reset();
 	}
 }

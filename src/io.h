@@ -71,4 +71,36 @@ uint16_t io_get_outputs_raw();
 
 bool io_get_output_raw(uint8_t onum);
 
+static inline void io_led_red_on() { PORTB |= (1 << PB7); }
+static inline void io_led_red_off() { PORTB &= ~(1 << PB7); }
+static inline void io_led_green_on() { PORTB |= (1 << PB6); }
+static inline void io_led_green_off() { PORTB &= ~(1 << PB6); }
+static inline void io_led_blue_on() { PORTG |= (1 << PG3); }
+static inline void io_led_blue_off() { PORTG &= ~(1 << PG3); }
+
+static inline void io_led_red(bool state) {
+	if (state)
+		io_led_red_on();
+	else
+		io_led_red_off();
+}
+
+static inline void io_led_green(bool state) {
+	if (state)
+		io_led_green_on();
+	else
+		io_led_green_off();
+}
+
+static inline void io_led_blue(bool state) {
+	if (state)
+		io_led_blue_on();
+	else
+		io_led_blue_off();
+}
+
+static inline bool io_led_red_state() { return (PORTB >> PB7) & 0x1; }
+static inline bool io_led_green_state() { return (PORTB >> PB6) & 0x1; }
+static inline bool io_led_blue_state() { return (PORTG >> PG3) & 0x1; }
+
 #endif
