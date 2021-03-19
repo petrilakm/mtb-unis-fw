@@ -22,7 +22,9 @@ void mtbbus_received(bool broadcast, uint8_t *data, uint8_t size);
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// uint16_t counter_100us = 0;
+#define LED_GR_ON 5
+#define LED_GR_OFF 2
+volatile uint8_t led_gr_counter = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -33,6 +35,12 @@ int main() {
 		if (config_write) {
 			config_save();
 			config_write = false;
+		}
+
+		if (led_gr_counter > 0) {
+			led_gr_counter--;
+			if (led_gr_counter == LED_GR_OFF)
+				io_led_green_off();
 		}
 
 		_delay_ms(10);
@@ -46,6 +54,8 @@ static inline void init() {
 
 	io_init();
 	io_led_red_on();
+	io_led_green_on();
+	io_led_blue_on();
 	scom_init();
 
 	// Setup timer 1 @ 10 kHz (period 100 us)
@@ -70,6 +80,8 @@ static inline void init() {
 	_delay_ms(50);
 	sei(); // enable interrupts globally
 	io_led_red_off();
+	io_led_green_off();
+	io_led_blue_off();
 }
 
 ISR(TIMER1_COMPA_vect) {
@@ -85,6 +97,7 @@ ISR(TIMER3_COMPA_vect) {
 }
 
 void btn_on_pressed() {
+	// TODO: blink LED (do not do it interrupt!)
 	uint8_t _mtbbus_addr = io_get_addr_raw();
 	if (_mtbbus_addr == 0)
 		_mtbbus_addr = 1; // TODO: report error
@@ -99,10 +112,14 @@ void mtbbus_received(bool broadcast, uint8_t *data, uint8_t size) {
 	if (size < 2)
 		return;
 
+	if (led_gr_counter == 0) {
+		io_led_green_on();
+		led_gr_counter = LED_GR_ON;
+	}
+
 	uint8_t command_code = data[0];
 
 	if (command_code == 0x01) {
-		io_led_red_toggle();
 	}
 }
 
