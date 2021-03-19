@@ -103,4 +103,8 @@ static inline bool io_led_red_state() { return (PORTB >> PB7) & 0x1; }
 static inline bool io_led_green_state() { return (PORTB >> PB6) & 0x1; }
 static inline bool io_led_blue_state() { return (PORTG >> PG3) & 0x1; }
 
+static inline void io_led_red_toggle() { io_led_red(!io_led_red_state()); }
+static inline void io_led_green_toggle() { io_led_red(!io_led_green_state()); }
+static inline void io_led_blue_toggle() { io_led_red(!io_led_blue_state()); }
+
 #endif

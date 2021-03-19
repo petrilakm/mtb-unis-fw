@@ -33,7 +33,6 @@ int main() {
 			config_write = false;
 		}
 
-		io_led_red(!io_led_red_state());
 		_delay_ms(100);
 		// wdt_reset();
 	}
@@ -44,6 +43,7 @@ static inline void init() {
 	// WDTCR |= WDP2; // ~250 ms timeout
 
 	io_init();
+	io_led_red_on();
 	scom_init();
 
 	// Setup timer 1 @ 10 kHz (period 100 us)
@@ -60,6 +60,7 @@ static inline void init() {
 	outputs_set_full(config_safe_state);
 
 	sei(); // enable interrupts globally
+	io_led_red_off();
 }
 
 ISR(TIMER1_COMPA_vect) {
