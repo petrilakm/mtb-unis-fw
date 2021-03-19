@@ -8,6 +8,7 @@ void io_init() {
 	DDRC = 0xFF; // outputs 15-8
 	DDRB |= 0xC0; // LEDs PB6 (red), PB7 (green)
 	DDRG |= 0x08; // LED PG3 (blue)
+	PORTG |= 0x10; // button pull-up
 }
 
 bool io_get_input_raw(uint8_t inum) {

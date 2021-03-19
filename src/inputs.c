@@ -7,10 +7,15 @@ uint16_t inputs_logic_state= 0;
 uint16_t inputs_debounced_state = 0;
 uint16_t inputs_old = 0;
 
+bool btn_pressed = false;
+
 #define DEBOUNCE_THRESHOLD 100 // 10 ms
 uint8_t _inputs_debounce_counter[NO_INPUTS] = {0, };
-
 uint8_t _inputs_fall_counter[NO_INPUTS] = {0, };
+uint8_t _btn_debounce_counter = 0;
+
+
+void _inputs_button_debuounce_update();
 
 void inputs_debounce_update() {
 	uint16_t state = io_get_inputs_raw();
@@ -41,6 +46,8 @@ void inputs_debounce_update() {
 
 		state >>= 1;
 	}
+
+	_inputs_button_debuounce_update();
 }
 
 void inputs_fall_update() {
@@ -49,6 +56,27 @@ void inputs_fall_update() {
 			_inputs_fall_counter[i]--;
 			if (_inputs_fall_counter[i] == 0)
 				inputs_logic_state &= ~(1 << i);
+		}
+	}
+}
+
+void _inputs_button_debuounce_update() {
+	bool state = io_button();
+	if (state & 0x01) {
+		if (_btn_debounce_counter > 0) {
+			_btn_debounce_counter--;
+			if ((_btn_debounce_counter) == 0 && (btn_pressed)) {
+				btn_pressed = false;
+				btn_on_depressed();
+			}
+		}
+	} else {
+		if (_btn_debounce_counter < DEBOUNCE_THRESHOLD) {
+			_btn_debounce_counter++;
+			if ((_btn_debounce_counter == DEBOUNCE_THRESHOLD) && (!btn_pressed)) {
+				btn_pressed = true;
+				btn_on_pressed();
+			}
 		}
 	}
 }

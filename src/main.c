@@ -33,7 +33,7 @@ int main() {
 			config_write = false;
 		}
 
-		_delay_ms(100);
+		_delay_ms(10);
 		// wdt_reset();
 	}
 }
@@ -59,6 +59,7 @@ static inline void init() {
 	config_load();
 	outputs_set_full(config_safe_state);
 
+	_delay_ms(50);
 	sei(); // enable interrupts globally
 	io_led_red_off();
 }
@@ -74,3 +75,10 @@ ISR(TIMER3_COMPA_vect) {
 	outputs_update();
 	inputs_fall_update();
 }
+
+void btn_on_pressed() {
+	config_safe_state[0] = 0x01;
+	outputs_set_full(config_safe_state);
+}
+
+void btn_on_depressed() {}

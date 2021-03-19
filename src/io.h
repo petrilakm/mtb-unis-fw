@@ -55,6 +55,8 @@
 #define INPUT_ADDR_6 PINA6
 #define INPUT_ADDR_7 PINA7
 
+#define INPUT_BUTTON PING4
+
 void io_init();
 
 bool io_get_input_raw(uint8_t inum);
@@ -104,7 +106,9 @@ static inline bool io_led_green_state() { return (PORTB >> PB6) & 0x1; }
 static inline bool io_led_blue_state() { return (PORTG >> PG3) & 0x1; }
 
 static inline void io_led_red_toggle() { io_led_red(!io_led_red_state()); }
-static inline void io_led_green_toggle() { io_led_red(!io_led_green_state()); }
-static inline void io_led_blue_toggle() { io_led_red(!io_led_blue_state()); }
+static inline void io_led_green_toggle() { io_led_green(!io_led_green_state()); }
+static inline void io_led_blue_toggle() { io_led_blue(!io_led_blue_state()); }
+
+static inline bool io_button() { return (PING >> 4) & 0x1; }
 
 #endif
