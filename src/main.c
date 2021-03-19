@@ -27,6 +27,11 @@ int main() {
 	init();
 
 	while (true) {
+		if (config_write) {
+			config_save();
+			config_write = false;
+		}
+
 		_delay_ms(10);
 		// wdt_reset();
 	}

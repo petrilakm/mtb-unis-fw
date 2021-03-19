@@ -3,6 +3,7 @@
 
 uint8_t config_safe_state[NO_OUTPUTS];
 uint8_t config_inputs_delay[NO_OUTPUTS/2];
+bool config_write = false;
 
 #define EEPROM_ADDR_VERSION       0x00
 #define EEPROM_ADDR_SAFE_STATE    0x10
