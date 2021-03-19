@@ -111,4 +111,7 @@ static inline void io_led_blue_toggle() { io_led_blue(!io_led_blue_state()); }
 
 static inline bool io_button() { return (PING >> 4) & 0x1; }
 
+static inline void uart_out() { PORTE |= (1 << PE2); }
+static inline void uart_in() { PORTE &= ~(1 << PE2); }
+
 #endif
