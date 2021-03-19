@@ -13,4 +13,6 @@ extern bool config_write;
 void config_load();
 void config_save();
 
+uint8_t input_delay(uint8_t input);
+
 #endif

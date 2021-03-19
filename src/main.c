@@ -11,6 +11,7 @@
 #include "scom.h"
 #include "outputs.h"
 #include "config.h"
+#include "inputs.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -62,10 +63,12 @@ static inline void init() {
 
 ISR(TIMER1_COMPA_vect) {
 	// Timer 1 @ 10 kHz (period 100 us)
+	inputs_debounce_update();
 }
 
 ISR(TIMER3_COMPA_vect) {
 	// Timer 3 @ 100 Hz (period 10 ms)
 	scom_update();
 	outputs_update();
+	inputs_fall_update();
 }
