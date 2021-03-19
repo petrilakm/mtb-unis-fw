@@ -6,6 +6,8 @@
 void io_init() {
 	DDRD = 0xFF; // outputs 7-0
 	DDRC = 0xFF; // outputs 15-8
+	DDRB |= 0xC0; // LEDs PB6 (red), PB7 (green)
+	DDRG |= 0x08; // LED PG3 (blue)
 }
 
 bool io_get_input_raw(uint8_t inum) {

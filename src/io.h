@@ -3,6 +3,11 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <avr/io.h>
+
+// Defines below are informative only, they are basically never used.
+// If you change IO pins mapping, look into ‹io.c› and change approprite
+// functions.
 
 #define NO_INPUTS 16
 #define INPUT_0 PINF7
@@ -40,16 +45,30 @@
 #define OUTPUT_14 PINC1
 #define OUTPUT_15 PINC0
 
+#define NO_INPUTS_ADDR 8
+#define INPUT_ADDR_0 PINA0
+#define INPUT_ADDR_1 PINA1
+#define INPUT_ADDR_2 PINA2
+#define INPUT_ADDR_3 PINA3
+#define INPUT_ADDR_4 PINA4
+#define INPUT_ADDR_5 PINA5
+#define INPUT_ADDR_6 PINA6
+#define INPUT_ADDR_7 PINA7
+
 void io_init();
 
 bool io_get_input_raw(uint8_t inum);
 uint16_t io_get_inputs_raw();
 
+static inline uint8_t io_get_addr_raw() {
+	return ~PINA;
+}
+
 void io_set_output_raw(uint8_t onum, bool state);
 void io_set_outputs_raw(uint16_t state);
 void io_set_outputs_raw_mask(uint16_t state, uint16_t mask);
 uint16_t io_get_outputs_raw();
-bool io_get_output_raw(uint8_t onum);
 
+bool io_get_output_raw(uint8_t onum);
 
 #endif
