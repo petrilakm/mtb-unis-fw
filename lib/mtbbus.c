@@ -157,7 +157,7 @@ static inline void _mtbbus_received_non_ninth(uint8_t data) {
 		mtbbus_input_buf_size++;
 	}
 
-	if (mtbbus_input_buf_size >= mtbbus_input_buf[0]) {
+	if (mtbbus_input_buf_size >= mtbbus_input_buf[0]+3) {
 		// whole message received
 		if (true) { // TODO: add checksum check
 			if (mtbbus_on_receive != NULL)

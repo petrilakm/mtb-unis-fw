@@ -12,11 +12,13 @@
 #include "outputs.h"
 #include "config.h"
 #include "inputs.h"
+#include "../lib/mtbbus.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
 int main();
 static inline void init();
+void mtbbus_received(bool broadcast, uint8_t *data, uint8_t size);
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -59,6 +61,12 @@ static inline void init() {
 	config_load();
 	outputs_set_full(config_safe_state);
 
+	uint8_t _mtbbus_addr = io_get_addr_raw();
+	if (_mtbbus_addr == 0)
+		_mtbbus_addr = 1; // TODO: report error
+	mtbbus_init(_mtbbus_addr, config_mtbbus_speed);
+	mtbbus_on_receive = mtbbus_received;
+
 	_delay_ms(50);
 	sei(); // enable interrupts globally
 	io_led_red_off();
@@ -77,8 +85,17 @@ ISR(TIMER3_COMPA_vect) {
 }
 
 void btn_on_pressed() {
-	config_safe_state[0] = 0x01;
-	outputs_set_full(config_safe_state);
+	uint8_t _mtbbus_addr = io_get_addr_raw();
+	if (_mtbbus_addr == 0)
+		_mtbbus_addr = 1; // TODO: report error
+	mtbbus_addr = _mtbbus_addr;
 }
 
 void btn_on_depressed() {}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void mtbbus_received(bool broadcast, uint8_t *data, uint8_t size) {
+}
+
+///////////////////////////////////////////////////////////////////////////////
