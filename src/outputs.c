@@ -48,7 +48,7 @@ void _apply_state() {
 	io_set_outputs_raw_mask(plain_state, plain_mask);
 }
 
-void outputs_set(uint8_t data[], size_t length) {
+void outputs_set_zipped(uint8_t data[], size_t length) {
 	if (length < 4)
 		return;
 
@@ -70,6 +70,12 @@ void outputs_set(uint8_t data[], size_t length) {
 		bin_state >>= 1;
 	}
 
+	_apply_state();
+}
+
+void outputs_set_full(uint8_t data[NO_OUTPUTS]) {
+	for (size_t i = 0; i < NO_OUTPUTS; i++)
+		_outputs_state[i] = data[i];
 	_apply_state();
 }
 

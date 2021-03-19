@@ -10,6 +10,7 @@
 #include "io.h"
 #include "scom.h"
 #include "outputs.h"
+#include "config.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -24,9 +25,6 @@ static inline void init();
 
 int main() {
 	init();
-
-	uint8_t test[] = {0x00, 0x03, 0x00, 0x05, 0x48, 0x43};
-	outputs_set(test, sizeof(test)/sizeof(*test));
 
 	while (true) {
 		_delay_ms(10);
@@ -50,6 +48,9 @@ static inline void init() {
 	TCCR3B = (1 << WGM12) | (1 << CS11) | (1 << CS10); // CTC mode, 64× prescaler
 	ETIMSK |= (1 << OCIE3A); // enable compare match interrupt
 	OCR3A = 2302;
+
+	config_load();
+	outputs_set_full(config_safe_state);
 
 	sei(); // enable interrupts globally
 }
