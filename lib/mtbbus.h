@@ -21,6 +21,8 @@ extern uint8_t mtbbus_input_buf_size;
 extern uint8_t mtbbus_addr;
 extern uint8_t mtbbus_speed;
 
+// ‹data› starts with Command code byte
+// ‹size› is amount of data bytes + 1
 extern void (*mtbbus_on_receive)(bool broadcast, uint8_t *data, uint8_t size);
 
 #define MTBBUS_SPEED_38400 0x01
