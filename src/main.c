@@ -102,7 +102,7 @@ void mtbbus_received(bool broadcast, uint8_t *data, uint8_t size) {
 	uint8_t command_code = data[0];
 
 	if (command_code == 0x01) {
-		io_led_red_on();
+		io_led_red_toggle();
 	}
 }
 
