@@ -22,6 +22,7 @@ static inline void init();
 void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len);
 void mtbbus_send_ack();
 void mtbbus_send_inputs(uint8_t message_code);
+void mtbbus_send_error(uint8_t code);
 static inline void leds_update();
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -171,24 +172,96 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 			last_input_changed = false;
 			mtbbus_send_ack();
 		}
+
+	} else if (command_code == MTBBUS_CMD_MOSI_INFO_REQ) {
+		mtbbus_output_buf[0] = 6;
+		mtbbus_output_buf[1] = CONFIG_MODULE_TYPE;
+		mtbbus_output_buf[2] = 0x00; // module flags
+		mtbbus_output_buf[3] = CONFIG_FW_MAJOR;
+		mtbbus_output_buf[4] = CONFIG_FW_MINOR;
+		mtbbus_output_buf[5] = CONFIG_PROTO_MAJOR;
+		mtbbus_output_buf[6] = CONFIG_PROTO_MINOR;
+		mtbbus_send_buf_autolen();
+
+	} else if ((command_code == MTBBUS_CMD_MOSI_SET_CONFIG) && (data_len >= 24)) {
+		for (size_t i = 0; i < NO_OUTPUTS; i++)
+			config_safe_state[i] = data[i];
+		for (size_t i = 0; i < NO_OUTPUTS/2; i++)
+			config_inputs_delay[i] = data[NO_OUTPUTS+i];
+		config_write = true;
+
+	} else if (command_code == MTBBUS_CMD_MOSI_GET_CONFIG) {
+		mtbbus_output_buf[0] = 24;
+		for (size_t i = 0; i < NO_OUTPUTS; i++)
+			mtbbus_output_buf[1+i] = config_safe_state[i];
+		for (size_t i = 0; i < NO_OUTPUTS/2; i++)
+			mtbbus_output_buf[1+NO_OUTPUTS+i] = config_inputs_delay[i];
+		mtbbus_send_buf_autolen();
+
+	} else if ((command_code == MTBBUS_CMD_MOSI_BEACON) && (data_len >= 1)) {
+		mtbbus_send_error(MTBBUS_ERROR_UNSUPPORTED_COMMAND);
+		// TODO
+
+	} else if (command_code == MTBBUS_CMD_MOSI_GET_INPUT) {
+		mtbbus_send_inputs(MTBBUS_CMD_MISO_INPUT_STATE);
+
+	} else if ((command_code == MTBBUS_CMD_MOSI_SET_OUTPUT) && (data_len >= 4)) {
+		outputs_set_zipped(data, data_len);
+
+		mtbbus_output_buf[0] = data_len;
+		for (size_t i = 0; i < data_len; i++)
+			mtbbus_output_buf[1+i] = data[i];
+		mtbbus_send_buf_autolen();
+
+	} else if (command_code == MTBBUS_CMD_MOSI_RESET_OUTPUTS) {
+		outputs_set_full(config_safe_state);
+
+		if (!broadcast)
+			mtbbus_send_ack();
+
+	} else if ((command_code == MTBBUS_CMD_MOSI_CHANGE_ADDR) && (data_len >= 1)) {
+		mtbbus_send_error(MTBBUS_ERROR_UNSUPPORTED_COMMAND);
+
+	} else if ((command_code == MTBBUS_CMD_MOSI_CHANGE_SPEED) && (data_len >= 1)) {
+		config_mtbbus_speed = data[0];
+		config_write = true;
+		mtbbus_set_speed(data[0]);
+
+	} else if ((command_code == MTBBUS_CMD_MOSI_FWUPGD_REQUEST) && (data_len >= 1)) {
+		mtbbus_send_error(MTBBUS_ERROR_UNSUPPORTED_COMMAND);
+		// TODO
+
+	} else if (command_code == MTBBUS_CMD_MOSI_REBOOT) {
+		mtbbus_send_error(MTBBUS_ERROR_UNSUPPORTED_COMMAND);
+		// TODO
+
+	} else {
+		mtbbus_send_error(MTBBUS_ERROR_UNKNOWN_COMMAND);
 	}
 }
 
+// Warning: functions below don't check mtbbus_can_fill_output_buf(), bacause
+// they should be called ONLY from mtbbus_received event (as MTBbus is
+// request-response based bus).
+
 void mtbbus_send_ack() {
-	if (!mtbbus_can_fill_output_buf())
-		return;
 	mtbbus_output_buf[0] = 1;
 	mtbbus_output_buf[1] = MTBBUS_CMD_MISO_ACK;
 	mtbbus_send_buf_autolen();
 }
 
 void mtbbus_send_inputs(uint8_t message_code) {
-	if (!mtbbus_can_fill_output_buf())
-		return;
 	mtbbus_output_buf[0] = 3;
 	mtbbus_output_buf[1] = message_code;
 	mtbbus_output_buf[2] = (inputs_logic_state >> 8) & 0xFF;
 	mtbbus_output_buf[3] = inputs_logic_state & 0xFF;
+	mtbbus_send_buf_autolen();
+}
+
+void mtbbus_send_error(uint8_t code) {
+	mtbbus_output_buf[0] = 2;
+	mtbbus_output_buf[1] = MTBBUS_CMD_MISO_ERROR;
+	mtbbus_output_buf[2] = code;
 	mtbbus_send_buf_autolen();
 }
 

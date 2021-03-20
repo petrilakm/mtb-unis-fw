@@ -170,8 +170,8 @@ static inline void _mtbbus_received_non_ninth(uint8_t data) {
 		uint16_t msg_crc = (mtbbus_input_buf[mtbbus_input_buf_size-1] << 8) | (mtbbus_input_buf[mtbbus_input_buf_size-2]);
 		if (received_crc == msg_crc) {
 			if (mtbbus_on_receive != NULL)
-				mtbbus_on_receive(received_addr == 0, mtbbus_input_buf[0],
-				                  mtbbus_input_buf+1, mtbbus_input_buf_size-3);
+				mtbbus_on_receive(received_addr == 0, mtbbus_input_buf[1],
+				                  mtbbus_input_buf+2, mtbbus_input_buf_size-3);
 		}
 
 		// Prepare for next receiving from XpressNET device
