@@ -36,6 +36,9 @@ void _apply_state() {
 		if (!_flicker_enabled[i])
 			_flicker_counters[i] = 0;
 
+		if ((_outputs_state[i] & 0x80) == 0)
+			scom_disable_output(i);
+
 		if (_outputs_state[i] & 0x80) { // S-COM
 			scom_output(i, _outputs_state[i] & 0x7F);
 		} else if ((_outputs_state[i] & 0x40) == 0) { // plain output
