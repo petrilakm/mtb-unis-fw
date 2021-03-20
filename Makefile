@@ -87,7 +87,8 @@ OBJDIR = obj
 
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = src/main.c src/io.c src/scom.c src/outputs.c src/config.c src/inputs.c lib/mtbbus.c
+SRC = src/main.c src/io.c src/scom.c src/outputs.c src/config.c src/inputs.c 
+SRC += lib/mtbbus.c lib/crc16modbus.c
 
 # List C++ source files here. (C dependencies are automatically generated.)
 # CPPSRC =

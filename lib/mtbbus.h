@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+#define MTBBUS_OUTPUT_BUF_MAX_SIZE_USER 120
 #define MTBBUS_OUTPUT_BUF_MAX_SIZE 128
 #define MTBBUS_INPUT_BUF_MAX_SIZE 128
 extern uint8_t mtbbus_output_buf[MTBBUS_OUTPUT_BUF_MAX_SIZE];

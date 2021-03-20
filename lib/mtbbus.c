@@ -4,6 +4,7 @@
 
 #include "mtbbus.h"
 #include "../src/io.h"
+#include "crc16modbus.h"
 
 uint8_t mtbbus_output_buf[MTBBUS_OUTPUT_BUF_MAX_SIZE];
 uint8_t mtbbus_output_buf_size = 0;
@@ -14,8 +15,8 @@ bool waiting_for_send = false;
 uint8_t mtbbus_input_buf[MTBBUS_INPUT_BUF_MAX_SIZE];
 uint8_t mtbbus_input_buf_size = 0;
 bool receiving = false;
-uint8_t received_xor = 0; // TODO
-uint8_t received_addr;
+volatile uint16_t received_crc = 0;
+volatile uint8_t received_addr;
 
 uint8_t mtbbus_addr;
 uint8_t mtbbus_speed;
@@ -64,7 +65,7 @@ void mtbbus_set_speed(uint8_t speed) {
 int mtbbus_send(uint8_t *data, uint8_t size) {
 	if (!mtbbus_can_fill_output_buf())
 		return 1;
-	if (size > MTBBUS_OUTPUT_BUF_MAX_SIZE)
+	if (size > MTBBUS_OUTPUT_BUF_MAX_SIZE_USER)
 		return 2;
 
 	for (uint8_t i = 0; i < size; i++)
@@ -79,15 +80,21 @@ int mtbbus_send_buf() {
 	if (sending)
 		return 1;
 	waiting_for_send = true;
-	// TODO: add checksum calculation
-	//mtbbus_output_buf[mtbbus_output_buf_size-1] = _xor(mtbbus_output_buf, mtbbus_output_buf_size-1);
+
+	size_t i = mtbbus_output_buf_size;
+	mtbbus_output_buf_size += 2;
+	uint16_t crc = crc16modbus_bytes(0, mtbbus_output_buf, mtbbus_output_buf_size);
+	mtbbus_output_buf[i] = crc & 0xFF;
+	mtbbus_output_buf[i+1] = (crc >> 8) & 0xFF;
 	return 0;
 }
 
 int mtbbus_send_buf_autolen() {
 	if (sending)
 		return 1;
-	mtbbus_output_buf_size = mtbbus_output_buf[0];
+	if (mtbbus_output_buf[0] > MTBBUS_OUTPUT_BUF_MAX_SIZE_USER)
+		return 2;
+	mtbbus_output_buf_size = mtbbus_output_buf[0]+1;
 	mtbbus_send_buf();
 	return 0;
 }
@@ -145,7 +152,7 @@ static inline void _mtbbus_received_ninth(uint8_t data) {
 	if ((received_addr == mtbbus_addr) || (received_addr == 0)) {
 		receiving = true;
 		mtbbus_input_buf_size = 0;
-		// TODO: prepere checksum calculation
+		received_crc = crc16modbus_byte(0, received_addr);
 	}
 }
 
@@ -154,21 +161,23 @@ static inline void _mtbbus_received_non_ninth(uint8_t data) {
 		return;
 
 	if (mtbbus_input_buf_size < MTBBUS_INPUT_BUF_MAX_SIZE) {
-		// TODO: one checksum iteration
+		if ((mtbbus_input_buf_size == 0) || (mtbbus_input_buf_size <= mtbbus_input_buf[0]))
+			received_crc = crc16modbus_byte(received_crc, data);
 		mtbbus_input_buf[mtbbus_input_buf_size] = data;
 		mtbbus_input_buf_size++;
 	}
 
 	if (mtbbus_input_buf_size >= mtbbus_input_buf[0]+3) {
 		// whole message received
-		if (true) { // TODO: add checksum check
+		uint16_t msg_crc = (mtbbus_input_buf[mtbbus_input_buf_size-1] << 8) | (mtbbus_input_buf[mtbbus_input_buf_size-2]);
+		if (received_crc == msg_crc) {
 			if (mtbbus_on_receive != NULL)
 				mtbbus_on_receive(received_addr == 0, mtbbus_input_buf+1, mtbbus_input_buf_size);
 		}
 
 		// Prepare for next receiving from XpressNET device
 		receiving = false;
-		// TODO: reset checksum
+		received_crc = 0;
 		mtbbus_input_buf_size = 0;
 	}
 }

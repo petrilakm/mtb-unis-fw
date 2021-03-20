@@ -13,6 +13,7 @@
 #include "config.h"
 #include "inputs.h"
 #include "../lib/mtbbus.h"
+#include "../lib/crc16modbus.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
