@@ -27,6 +27,8 @@ static inline void leds_update();
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#define BEACON_LED_RED // code for MTB-UNI v4.0 should define this variable
+
 #define LED_GR_ON 5
 #define LED_GR_OFF 2
 volatile uint8_t led_gr_counter = 0;
@@ -45,6 +47,12 @@ typedef union {
 } error_flags_t;
 
 error_flags_t error_flags = {0};
+
+volatile bool beacon = false;
+
+#define LED_BLUE_BEACON_ON 100
+#define LED_BLUE_BEACON_OFF 50
+volatile uint8_t led_blue_counter = 0;
 
 void led_red_ok();
 
@@ -121,15 +129,30 @@ static inline void leds_update() {
 			io_led_green_off();
 	}
 
+	bool led_red_flashing = error_flags.all;
+	#ifdef BEACON_LED_RED
+	led_red_flashing |= beacon;
+	#endif
+
 	if (led_red_counter > 0) {
 		led_red_counter--;
-		if (((error_flags.all == 0) && (led_red_counter == LED_RED_OK_OFF)) ||
-			((error_flags.all != 0) && (led_red_counter == LED_RED_ERR_OFF)))
+		if (((!led_red_flashing) && (led_red_counter == LED_RED_OK_OFF)) ||
+			((led_red_flashing) && (led_red_counter == LED_RED_ERR_OFF)))
 			io_led_red_off();
 	}
-	if ((error_flags.all != 0) && (led_red_counter == 0)) {
+	if ((led_red_flashing) && (led_red_counter == 0)) {
 		led_red_counter = LED_RED_ERR_ON;
 		io_led_red_on();
+	}
+
+	if (led_blue_counter > 0) {
+		led_blue_counter--;
+		if (led_blue_counter == LED_BLUE_BEACON_OFF)
+			io_led_blue_off();
+	}
+	if ((beacon) && (led_blue_counter == 0)) {
+		led_blue_counter = LED_BLUE_BEACON_ON;
+		io_led_blue_on();
 	}
 }
 
@@ -160,7 +183,7 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 		led_gr_counter = LED_GR_ON;
 	}
 
-	if ((command_code == MTBBUS_CMD_MOSI_MODULE_INQUIRY) && (data_len >= 1)) {
+	if ((!broadcast) && (command_code == MTBBUS_CMD_MOSI_MODULE_INQUIRY) && (data_len >= 1)) {
 		static bool last_input_changed = false;
 		bool last_ok = data[0] & 0x01;
 		if ((inputs_logic_state != inputs_old) || (last_input_changed && !last_ok)) {
@@ -173,7 +196,7 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 			mtbbus_send_ack();
 		}
 
-	} else if (command_code == MTBBUS_CMD_MOSI_INFO_REQ) {
+	} else if ((command_code == MTBBUS_CMD_MOSI_INFO_REQ) && (!broadcast)) {
 		mtbbus_output_buf[0] = 6;
 		mtbbus_output_buf[1] = CONFIG_MODULE_TYPE;
 		mtbbus_output_buf[2] = 0x00; // module flags
@@ -183,14 +206,15 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 		mtbbus_output_buf[6] = CONFIG_PROTO_MINOR;
 		mtbbus_send_buf_autolen();
 
-	} else if ((command_code == MTBBUS_CMD_MOSI_SET_CONFIG) && (data_len >= 24)) {
+	} else if ((command_code == MTBBUS_CMD_MOSI_SET_CONFIG) && (data_len >= 24) && (!broadcast)) {
 		for (size_t i = 0; i < NO_OUTPUTS; i++)
 			config_safe_state[i] = data[i];
 		for (size_t i = 0; i < NO_OUTPUTS/2; i++)
 			config_inputs_delay[i] = data[NO_OUTPUTS+i];
 		config_write = true;
+		mtbbus_send_ack();
 
-	} else if (command_code == MTBBUS_CMD_MOSI_GET_CONFIG) {
+	} else if ((command_code == MTBBUS_CMD_MOSI_GET_CONFIG) && (!broadcast)) {
 		mtbbus_output_buf[0] = 24;
 		for (size_t i = 0; i < NO_OUTPUTS; i++)
 			mtbbus_output_buf[1+i] = config_safe_state[i];
@@ -199,13 +223,16 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 		mtbbus_send_buf_autolen();
 
 	} else if ((command_code == MTBBUS_CMD_MOSI_BEACON) && (data_len >= 1)) {
+		beacon = data[0];
 		mtbbus_send_error(MTBBUS_ERROR_UNSUPPORTED_COMMAND);
-		// TODO
 
-	} else if (command_code == MTBBUS_CMD_MOSI_GET_INPUT) {
+		if (!broadcast)
+			mtbbus_send_ack();
+
+	} else if ((command_code == MTBBUS_CMD_MOSI_GET_INPUT) && (!broadcast)) {
 		mtbbus_send_inputs(MTBBUS_CMD_MISO_INPUT_STATE);
 
-	} else if ((command_code == MTBBUS_CMD_MOSI_SET_OUTPUT) && (data_len >= 4)) {
+	} else if ((command_code == MTBBUS_CMD_MOSI_SET_OUTPUT) && (data_len >= 4) && (!broadcast)) {
 		outputs_set_zipped(data, data_len);
 
 		mtbbus_output_buf[0] = data_len;
@@ -219,7 +246,7 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 		if (!broadcast)
 			mtbbus_send_ack();
 
-	} else if ((command_code == MTBBUS_CMD_MOSI_CHANGE_ADDR) && (data_len >= 1)) {
+	} else if ((command_code == MTBBUS_CMD_MOSI_CHANGE_ADDR) && (data_len >= 1) && (!broadcast)) {
 		mtbbus_send_error(MTBBUS_ERROR_UNSUPPORTED_COMMAND);
 
 	} else if ((command_code == MTBBUS_CMD_MOSI_CHANGE_SPEED) && (data_len >= 1)) {
