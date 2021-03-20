@@ -67,15 +67,12 @@ int main() {
 			config_write = false;
 		}
 
+		wdt_reset();
 		_delay_ms(10);
-		// wdt_reset();
 	}
 }
 
 static inline void init() {
-	// WDTCR |= 1 << WDE;  // watchdog enable
-	// WDTCR |= WDP2; // ~250 ms timeout
-
 	io_init();
 	io_led_red_on();
 	io_led_green_on();
@@ -101,6 +98,9 @@ static inline void init() {
 	mtbbus_on_receive = mtbbus_received;
 
 	_delay_ms(50);
+
+	wdt_enable(WDTO_250MS);
+
 	sei(); // enable interrupts globally
 	io_led_red_off();
 	io_led_green_off();
