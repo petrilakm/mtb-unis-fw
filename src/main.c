@@ -197,13 +197,14 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 		}
 
 	} else if ((command_code == MTBBUS_CMD_MOSI_INFO_REQ) && (!broadcast)) {
-		mtbbus_output_buf[0] = 6;
-		mtbbus_output_buf[1] = CONFIG_MODULE_TYPE;
-		mtbbus_output_buf[2] = 0x00; // module flags
-		mtbbus_output_buf[3] = CONFIG_FW_MAJOR;
-		mtbbus_output_buf[4] = CONFIG_FW_MINOR;
-		mtbbus_output_buf[5] = CONFIG_PROTO_MAJOR;
-		mtbbus_output_buf[6] = CONFIG_PROTO_MINOR;
+		mtbbus_output_buf[0] = 7;
+		mtbbus_output_buf[1] = MTBBUS_CMD_MISO_MODULE_INFO;
+		mtbbus_output_buf[2] = CONFIG_MODULE_TYPE;
+		mtbbus_output_buf[3] = 0x00; // module flags
+		mtbbus_output_buf[4] = CONFIG_FW_MAJOR;
+		mtbbus_output_buf[5] = CONFIG_FW_MINOR;
+		mtbbus_output_buf[6] = CONFIG_PROTO_MAJOR;
+		mtbbus_output_buf[7] = CONFIG_PROTO_MINOR;
 		mtbbus_send_buf_autolen();
 
 	} else if ((command_code == MTBBUS_CMD_MOSI_SET_CONFIG) && (data_len >= 24) && (!broadcast)) {
