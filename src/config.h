@@ -1,6 +1,9 @@
 #ifndef _CONFIG_H_
 #define _CONFIG_H_
 
+/* General configuration of MTB-UNI module
+ */
+
 #include <stdint.h>
 #include <stdbool.h>
 #include "io.h"

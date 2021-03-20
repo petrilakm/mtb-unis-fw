@@ -1,6 +1,9 @@
 #ifndef _OUTPUTS_H_
 #define _OUTPUTS_H_
 
+/* Setting state of outputs: flickering, unzipping state, calling S-COM library.
+ */
+
 #include <stdint.h>
 #include <stddef.h>
 

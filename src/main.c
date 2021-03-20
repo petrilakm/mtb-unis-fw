@@ -1,4 +1,4 @@
-/* Main source file of MTB-UNI v4 CPU ATmega128.
+/* Main source file of MTB-UNI v4 CPU's ATmega128 firmware.
  */
 
 #include <stdbool.h>

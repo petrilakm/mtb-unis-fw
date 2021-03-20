@@ -1,7 +1,8 @@
 #ifndef _SCOM_H_
 #define _SCOM_H_
 
-// S-COM output generator
+/* S-COM signal generator
+ */
 
 #include <stdbool.h>
 #include "io.h"

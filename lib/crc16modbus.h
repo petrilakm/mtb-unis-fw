@@ -1,4 +1,4 @@
-// The _bit, _byte, and _word routines return the CRC of the len bytes at mem,
+// The _bit and _byte routines return the CRC of the len bytes at mem,
 // applied to the previous CRC value, crc. If mem is NULL, then the other
 // arguments are ignored, and the initial CRC, i.e. the CRC of zero bytes, is
 // returned. Those routines will all return the same result, differing only in
@@ -7,7 +7,7 @@
 // multiple of eight. The low bits bits of the low byte of val are applied to
 // crc. bits must be in 0..8.
 
-// This code is automatically generated from:
+// This code is based on automatically-generated code from:
 // ‹https://github.com/madler/crcany›
 
 #include <stddef.h>

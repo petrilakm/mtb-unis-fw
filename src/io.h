@@ -1,6 +1,11 @@
 #ifndef _IO_H_
 #define _IO_H_
 
+/* Raw input-output operation of MTB-UNI v4 module.
+ * This unit does not perform any debouncing nor any complicated IO stuff.
+ * It just abstracts IO with nice & fast functions.
+ */
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <avr/io.h>
