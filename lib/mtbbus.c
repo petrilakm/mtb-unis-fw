@@ -163,7 +163,7 @@ static inline void _mtbbus_received_non_ninth(uint8_t data) {
 		// whole message received
 		if (true) { // TODO: add checksum check
 			if (mtbbus_on_receive != NULL)
-				mtbbus_on_receive(received_addr, mtbbus_input_buf+1, mtbbus_input_buf_size);
+				mtbbus_on_receive(received_addr == 0, mtbbus_input_buf+1, mtbbus_input_buf_size);
 		}
 
 		// Prepare for next receiving from XpressNET device
