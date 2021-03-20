@@ -40,6 +40,8 @@ void inputs_debounce_update() {
 				if (_inputs_debounce_counter[i] == DEBOUNCE_THRESHOLD) {
 					inputs_debounced_state |= (1 << i);
 					inputs_logic_state |= (1 << i); // no fall
+					if (_inputs_fall_counter[i] > 0)
+						_inputs_fall_counter[i] = 0; // stop falling counter
 				}
 			}
 		}
