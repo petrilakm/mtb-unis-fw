@@ -19,12 +19,30 @@
 int main();
 static inline void init();
 void mtbbus_received(bool broadcast, uint8_t *data, uint8_t size);
+static inline void leds_update();
 
 ///////////////////////////////////////////////////////////////////////////////
 
 #define LED_GR_ON 5
 #define LED_GR_OFF 2
 volatile uint8_t led_gr_counter = 0;
+
+#define LED_RED_OK_ON 40
+#define LED_RED_OK_OFF 20
+#define LED_RED_ERR_ON 100
+#define LED_RED_ERR_OFF 50
+volatile uint8_t led_red_counter = 0;
+
+typedef union {
+	struct {
+		bool addr_zero : 1;
+	} bits;
+	uint8_t all;
+} error_flags_t;
+
+error_flags_t error_flags = {0};
+
+void led_red_ok();
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -35,12 +53,6 @@ int main() {
 		if (config_write) {
 			config_save();
 			config_write = false;
-		}
-
-		if (led_gr_counter > 0) {
-			led_gr_counter--;
-			if (led_gr_counter == LED_GR_OFF)
-				io_led_green_off();
 		}
 
 		_delay_ms(10);
@@ -72,8 +84,7 @@ static inline void init() {
 	outputs_set_full(config_safe_state);
 
 	uint8_t _mtbbus_addr = io_get_addr_raw();
-	if (_mtbbus_addr == 0)
-		_mtbbus_addr = 1; // TODO: report error
+	error_flags.bits.addr_zero = (_mtbbus_addr == 0);
 	mtbbus_init(_mtbbus_addr, config_mtbbus_speed);
 	mtbbus_on_receive = mtbbus_received;
 
@@ -94,14 +105,45 @@ ISR(TIMER3_COMPA_vect) {
 	scom_update();
 	outputs_update();
 	inputs_fall_update();
+	leds_update();
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
+static inline void leds_update() {
+	if (led_gr_counter > 0) {
+		led_gr_counter--;
+		if (led_gr_counter == LED_GR_OFF)
+			io_led_green_off();
+	}
+
+	if (led_red_counter > 0) {
+		led_red_counter--;
+		if (((error_flags.all == 0) && (led_red_counter == LED_RED_OK_OFF)) ||
+			((error_flags.all != 0) && (led_red_counter == LED_RED_ERR_OFF)))
+			io_led_red_off();
+	}
+	if ((error_flags.all != 0) && (led_red_counter == 0)) {
+		led_red_counter = LED_RED_ERR_ON;
+		io_led_red_on();
+	}
+}
+
+void led_red_ok() {
+	if (led_red_counter == 0) {
+		led_red_counter = LED_RED_OK_ON;
+		io_led_red_on();
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void btn_on_pressed() {
-	// TODO: blink LED (do not do it interrupt!)
 	uint8_t _mtbbus_addr = io_get_addr_raw();
-	if (_mtbbus_addr == 0)
-		_mtbbus_addr = 1; // TODO: report error
+	error_flags.bits.addr_zero = (_mtbbus_addr == 0);
 	mtbbus_addr = _mtbbus_addr;
+	if (mtbbus_addr != 0)
+		led_red_ok();
 }
 
 void btn_on_depressed() {}
