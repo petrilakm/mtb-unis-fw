@@ -10,7 +10,6 @@ uint8_t mtbbus_output_buf[MTBBUS_OUTPUT_BUF_MAX_SIZE];
 uint8_t mtbbus_output_buf_size = 0;
 uint8_t mtbbus_next_byte_to_send = 0;
 bool sending = false;
-bool waiting_for_send = false;
 
 uint8_t mtbbus_input_buf[MTBBUS_INPUT_BUF_MAX_SIZE];
 uint8_t mtbbus_input_buf_size = 0;
@@ -20,7 +19,7 @@ volatile uint8_t received_addr;
 
 uint8_t mtbbus_addr;
 uint8_t mtbbus_speed;
-void (*mtbbus_on_receive)(bool broadcast, uint8_t data[], uint8_t size) = NULL;
+void (*mtbbus_on_receive)(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len) = NULL;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -79,13 +78,13 @@ int mtbbus_send(uint8_t *data, uint8_t size) {
 int mtbbus_send_buf() {
 	if (sending)
 		return 1;
-	waiting_for_send = true;
 
 	size_t i = mtbbus_output_buf_size;
-	mtbbus_output_buf_size += 2;
 	uint16_t crc = crc16modbus_bytes(0, mtbbus_output_buf, mtbbus_output_buf_size);
+	mtbbus_output_buf_size += 2;
 	mtbbus_output_buf[i] = crc & 0xFF;
 	mtbbus_output_buf[i+1] = (crc >> 8) & 0xFF;
+	_mtbbus_send_buf();
 	return 0;
 }
 
@@ -101,7 +100,6 @@ int mtbbus_send_buf_autolen() {
 
 void _mtbbus_send_buf() {
 	sending = true;
-	waiting_for_send = false;
 	mtbbus_next_byte_to_send = 0;
 	uart_out();
 
@@ -126,7 +124,7 @@ ISR(USART0_TX_vect) {
 }
 
 bool mtbbus_can_fill_output_buf() {
-	return !sending && !waiting_for_send;
+	return !sending;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -172,7 +170,8 @@ static inline void _mtbbus_received_non_ninth(uint8_t data) {
 		uint16_t msg_crc = (mtbbus_input_buf[mtbbus_input_buf_size-1] << 8) | (mtbbus_input_buf[mtbbus_input_buf_size-2]);
 		if (received_crc == msg_crc) {
 			if (mtbbus_on_receive != NULL)
-				mtbbus_on_receive(received_addr == 0, mtbbus_input_buf+1, mtbbus_input_buf_size);
+				mtbbus_on_receive(received_addr == 0, mtbbus_input_buf[0],
+				                  mtbbus_input_buf+1, mtbbus_input_buf_size-3);
 		}
 
 		// Prepare for next receiving from XpressNET device

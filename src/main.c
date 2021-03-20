@@ -19,7 +19,9 @@
 
 int main();
 static inline void init();
-void mtbbus_received(bool broadcast, uint8_t *data, uint8_t size);
+void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len);
+void mtbbus_send_ack();
+void mtbbus_send_inputs(uint8_t message_code);
 static inline void leds_update();
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -151,19 +153,43 @@ void btn_on_depressed() {}
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void mtbbus_received(bool broadcast, uint8_t *data, uint8_t size) {
-	if (size < 2)
-		return;
-
+void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len) {
 	if (led_gr_counter == 0) {
 		io_led_green_on();
 		led_gr_counter = LED_GR_ON;
 	}
 
-	uint8_t command_code = data[0];
-
-	if (command_code == 0x01) {
+	if ((command_code == MTBBUS_CMD_MOSI_MODULE_INQUIRY) && (data_len >= 1)) {
+		static bool last_input_changed = false;
+		bool last_ok = data[0] & 0x01;
+		if ((inputs_logic_state != inputs_old) || (last_input_changed && !last_ok)) {
+			// Send inputs changed
+			last_input_changed = true;
+			mtbbus_send_inputs(MTBBUS_CMD_MISO_INPUT_CHANGED);
+			inputs_old = inputs_logic_state;
+		} else {
+			last_input_changed = false;
+			mtbbus_send_ack();
+		}
 	}
+}
+
+void mtbbus_send_ack() {
+	if (!mtbbus_can_fill_output_buf())
+		return;
+	mtbbus_output_buf[0] = 1;
+	mtbbus_output_buf[1] = MTBBUS_CMD_MISO_ACK;
+	mtbbus_send_buf_autolen();
+}
+
+void mtbbus_send_inputs(uint8_t message_code) {
+	if (!mtbbus_can_fill_output_buf())
+		return;
+	mtbbus_output_buf[0] = 3;
+	mtbbus_output_buf[1] = message_code;
+	mtbbus_output_buf[2] = (inputs_logic_state >> 8) & 0xFF;
+	mtbbus_output_buf[3] = inputs_logic_state & 0xFF;
+	mtbbus_send_buf_autolen();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
