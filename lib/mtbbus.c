@@ -23,8 +23,8 @@ void (*mtbbus_on_receive)(bool broadcast, uint8_t command_code, uint8_t *data, u
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void _send_next_byte();
-void _mtbbus_send_buf();
+static void _send_next_byte();
+static inline void _mtbbus_send_buf();
 static inline void _mtbbus_received_ninth(uint8_t data);
 static inline void _mtbbus_received_non_ninth(uint8_t data);
 
@@ -98,7 +98,7 @@ int mtbbus_send_buf_autolen() {
 	return 0;
 }
 
-void _mtbbus_send_buf() {
+static inline void _mtbbus_send_buf() {
 	sending = true;
 	mtbbus_next_byte_to_send = 0;
 	uart_out();
@@ -107,7 +107,7 @@ void _mtbbus_send_buf() {
 	_send_next_byte();
 }
 
-void _send_next_byte() {
+static void _send_next_byte() {
 	loop_until_bit_is_set(UCSR0A, UDRE0); // wait for empty transmit buffer
 	UCSR0B &= ~_BV(TXB80); // 9 bit = 0
 	UDR0 = mtbbus_output_buf[mtbbus_next_byte_to_send];

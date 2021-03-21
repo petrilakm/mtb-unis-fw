@@ -15,7 +15,7 @@ uint8_t _inputs_fall_counter[NO_INPUTS] = {0, };
 uint8_t _btn_debounce_counter = 0;
 
 
-void _inputs_button_debuounce_update();
+static void _inputs_button_debuounce_update();
 
 void inputs_debounce_update() {
 	uint16_t state = io_get_inputs_raw();
@@ -62,7 +62,7 @@ void inputs_fall_update() {
 	}
 }
 
-void _inputs_button_debuounce_update() {
+static void _inputs_button_debuounce_update() {
 	bool state = io_button();
 	if (state & 0x01) {
 		if (_btn_debounce_counter > 0) {

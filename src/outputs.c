@@ -24,7 +24,7 @@ bool _flicker_enabled[NO_OUTPUTS] = {false, };
 // ‹https://github.com/kmzbrnoI/mtbbus-protocol/blob/master/modules/uni.md›
 uint8_t _outputs_state[NO_OUTPUTS] = {0, };
 
-void _apply_state() {
+static void _apply_state() {
 	uint16_t plain_mask = 0;
 	uint16_t plain_state = 0;
 
