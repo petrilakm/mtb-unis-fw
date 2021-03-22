@@ -16,6 +16,7 @@
 #include "../lib/crc16modbus.h"
 
 ///////////////////////////////////////////////////////////////////////////////
+// Function prototypes
 
 int main();
 static inline void init();
@@ -24,8 +25,10 @@ void mtbbus_send_ack();
 void mtbbus_send_inputs(uint8_t message_code);
 void mtbbus_send_error(uint8_t code);
 static inline void leds_update();
+void led_red_ok();
 
 ///////////////////////////////////////////////////////////////////////////////
+// Defines & global variables
 
 #define BEACON_LED_RED // code for MTB-UNI v4.0 should define this variable
 
@@ -54,7 +57,10 @@ volatile bool beacon = false;
 #define LED_BLUE_BEACON_OFF 50
 volatile uint8_t led_blue_counter = 0;
 
-void led_red_ok();
+__attribute__((used, section(".fwattr"))) struct {
+	uint8_t no_pages;
+	uint16_t crc;
+} fwattr;
 
 ///////////////////////////////////////////////////////////////////////////////
 
