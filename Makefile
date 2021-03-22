@@ -44,6 +44,9 @@
 MCU = atmega128
 
 
+CRC_POS = 0xEFFE
+
+
 # Processor fuses.
 #     Define fuses for processor, flash by calling 'make fuses'
 FUSES = -U lfuse:w:0x7E:m -U hfuse:w:0xC0:m -U efuse:w:0xFF:m -U lock:w:0xEF:m
@@ -431,7 +434,8 @@ extcoff: $(TARGET).elf
 %.hex: %.elf
 	@echo
 	@echo $(MSG_FLASH) $@
-	$(OBJCOPY) -O $(FORMAT) -R .eeprom $< $@
+	$(OBJCOPY) -O $(FORMAT) -R .eeprom $< $@_nocrc
+	./calc_crc.py $@_nocrc $@ $(CRC_POS)
 
 %.eep: %.elf
 	@echo
