@@ -17,6 +17,7 @@ CFLAGS += $(patsubst %,-I%,$(EXTRAINCDIRS))
 CFLAGS += -std=$(CSTANDARD)
 
 LDFLAGS = -Wl,-Map=$(TARGET).map,--cref
+LDFLAGS += -Wl,-Ttext=0xF000
 
 #---------------- Programming Options (avrdude) ----------------
 
