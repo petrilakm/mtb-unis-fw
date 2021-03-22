@@ -17,11 +17,9 @@ CFLAGS += -O$(OPT)
 CFLAGS += -Wall
 CFLAGS += -pedantic
 CFLAGS += -Wa,-adhlns=$(<:%.c=$(OBJDIR)/%.lst)
-CFLAGS += $(patsubst %,-I%,$(EXTRAINCDIRS))
 CFLAGS += -std=$(CSTANDARD)
 
 LDFLAGS = -Wl,-Map=$(TARGET).map,--cref
-LDFLAGS += $(patsubst %,-L%,$(EXTRALIBDIRS))
 LDFLAGS += -Wl,-section-start=.fwattr=0xEFFE
 
 #---------------- Programming Options (avrdude) ----------------
@@ -99,24 +97,24 @@ $(TARGET)_with_bootloader.hex: $(TARGET).hex bootloader/build/mtb-uni-v4-bootloa
 	head -n -1 $< > $@
 	cat bootloader/build/mtb-uni-v4-bootloader.hex >> $@
 
-%.hex: %.elf
+$(BUILDDIR)/%.hex: $(BUILDDIR)/%.elf
 	@echo
 	@echo $(MSG_FLASH) $@
 	$(OBJCOPY) -O $(FORMAT) -R .eeprom $< $@_nocrc
 	./calc_crc.py $@_nocrc $@ $(CRC_POS)
 
-%.eep: %.elf
+$(BUILDDIR)/%.eep: $(BUILDDIR)/%.elf
 	@echo
 	@echo $(MSG_EEPROM) $@
 	-$(OBJCOPY) -j .eeprom --set-section-flags=.eeprom="alloc,load" \
 	--change-section-lma .eeprom=0 --no-change-warnings -O $(FORMAT) $< $@ || exit 0
 
-%.lss: %.elf
+$(BUILDDIR)/%.lss: $(BUILDDIR)/%.elf
 	@echo
 	@echo $(MSG_EXTENDED_LISTING) $@
 	$(OBJDUMP) -h -S $< > $@
 
-%.sym: %.elf
+$(BUILDDIR)/%.sym: $(BUILDDIR)/%.elf
 	@echo
 	@echo $(MSG_SYMBOL_TABLE) $@
 	$(NM) -n $< > $@

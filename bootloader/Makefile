@@ -3,7 +3,7 @@ F_CPU = 14745600
 FORMAT = ihex
 TARGET = build/mtb-uni-v4-bootloader
 BUILDDIR = build
-TARGET = $(BUILDDIR)/mtb-uni-v4
+TARGET = $(BUILDDIR)/mtb-uni-v4-bootloader
 OBJDIR = obj
 SRC = $(wildcard src/*.c) $(wildcard lib/*.c)
 OPT = 2
@@ -93,17 +93,18 @@ program: $(TARGET).hex
 
 $(TARGET)_with_bootloader.hex: $
 
-%.hex: %.elf
+$(BUILDDIR)/%.hex: $(BUILDDIR)/%.elf
 	@echo
 	@echo $(MSG_FLASH) $@
 	$(OBJCOPY) -O $(FORMAT) -R .eeprom $< $@
+	dos2unix $@
 
-%.lss: %.elf
+$(BUILDDIR)/%.lss: $(BUILDDIR)/%.elf
 	@echo
 	@echo $(MSG_EXTENDED_LISTING) $@
 	$(OBJDUMP) -h -S $< > $@
 
-%.sym: %.elf
+$(BUILDDIR)/%.sym: $(BUILDDIR)/%.elf
 	@echo
 	@echo $(MSG_SYMBOL_TABLE) $@
 	$(NM) -n $< > $@
