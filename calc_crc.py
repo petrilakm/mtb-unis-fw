@@ -43,13 +43,18 @@ def calc_crc(in_filename: str, out_filename: str, crc_addr: int) -> None:
         nextaddr = 0
         crc = 0
         skip = False
+        offset = 0
 
         for line in infile:
             assert line.startswith(':')
             bytes_count = int(line[1:3], base=16)
             addr = int(line[3:7], base=16)
+            type_ = int(line[7:9])
 
-            if addr == crc_addr:
+            if type_ == 2:
+                offset = int(line[9:13], base=16)*16
+
+            if type_ == 0 and offset+addr == crc_addr:
                 pages = math.ceil(nextaddr/256)
                 print(f'Total {nextaddr} bytes = {pages} pages'
                       f', CRC is {hex(crc)}.')
@@ -74,7 +79,8 @@ def calc_crc(in_filename: str, out_filename: str, crc_addr: int) -> None:
                 skip = True
                 continue
 
-            if not skip:
+            if not skip and type_ == 0:
+                assert offset == 0, 'Offset of code not yet supported'
                 assert nextaddr == addr, line
                 nextaddr += bytes_count
                 data = line[9:-3]

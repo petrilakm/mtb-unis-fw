@@ -1,5 +1,5 @@
 MCU = atmega128
-CRC_POS = 0xEF00
+CRC_POS = 0x1DF00
 FUSES = -U lfuse:w:0x3E:m -U hfuse:w:0xC0:m -U efuse:w:0xFF:m -U lock:w:0xFF:m
 F_CPU = 14745600
 FORMAT = ihex
