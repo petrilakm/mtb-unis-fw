@@ -17,6 +17,9 @@ extern uint8_t config_mtbbus_speed;
 void config_load();
 void config_save();
 
+void config_boot_fwupgd();
+void config_boot_normal();
+
 uint8_t input_delay(uint8_t input);
 
 #define CONFIG_MODULE_TYPE 0x15
@@ -24,5 +27,8 @@ uint8_t input_delay(uint8_t input);
 #define CONFIG_FW_MINOR 1
 #define CONFIG_PROTO_MAJOR 4
 #define CONFIG_PROTO_MINOR 0
+
+#define CONFIG_BOOT_FWUPGD 0x01
+#define CONFIG_BOOT_NORMAL 0x00
 
 #endif

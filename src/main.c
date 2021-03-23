@@ -7,6 +7,7 @@
 #include <avr/io.h>
 #include <avr/wdt.h>
 
+#include "common.h"
 #include "io.h"
 #include "scom.h"
 #include "outputs.h"
@@ -232,8 +233,6 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 
 	} else if ((command_code == MTBBUS_CMD_MOSI_BEACON) && (data_len >= 1)) {
 		beacon = data[0];
-		mtbbus_send_error(MTBBUS_ERROR_UNSUPPORTED_COMMAND);
-
 		if (!broadcast)
 			mtbbus_send_ack();
 
@@ -262,13 +261,18 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 		config_write = true;
 		mtbbus_set_speed(data[0]);
 
-	} else if ((command_code == MTBBUS_CMD_MOSI_FWUPGD_REQUEST) && (data_len >= 1)) {
-		mtbbus_send_error(MTBBUS_ERROR_UNSUPPORTED_COMMAND);
-		// TODO
+	} else if ((command_code == MTBBUS_CMD_MOSI_FWUPGD_REQUEST) && (data_len >= 1) && (!broadcast)) {
+		config_boot_fwupgd();
+		mtbbus_on_sent = &goto_bootloader;
+		mtbbus_send_ack();
 
 	} else if (command_code == MTBBUS_CMD_MOSI_REBOOT) {
-		mtbbus_send_error(MTBBUS_ERROR_UNSUPPORTED_COMMAND);
-		// TODO
+		if (broadcast) {
+			goto_bootloader();
+		} else {
+			mtbbus_on_sent = &goto_bootloader;
+			mtbbus_send_ack();
+		}
 
 	} else {
 		mtbbus_send_error(MTBBUS_ERROR_UNKNOWN_COMMAND);
@@ -303,6 +307,5 @@ void mtbbus_send_error(uint8_t code) {
 ///////////////////////////////////////////////////////////////////////////////
 
 static inline void goto_bootloader() {
-	#define BOOTLOADER_ADDR 0xF000
 	__asm__ volatile ("ijmp" ::"z" (BOOTLOADER_ADDR));
 }

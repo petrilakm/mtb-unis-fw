@@ -20,6 +20,7 @@ volatile uint8_t received_addr;
 uint8_t mtbbus_addr;
 uint8_t mtbbus_speed;
 void (*mtbbus_on_receive)(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len) = NULL;
+void (*mtbbus_on_sent)() = NULL;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -120,6 +121,11 @@ ISR(USART0_TX_vect) {
 	} else {
 		uart_in();
 		sending = false;
+		if (mtbbus_on_sent != NULL) {
+			void (*tmp)() = mtbbus_on_sent;
+			mtbbus_on_sent = NULL;
+			tmp();
+		}
 	}
 }
 
