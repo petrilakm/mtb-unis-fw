@@ -26,12 +26,23 @@ In future, firmware could also be upgraded directly via MTBbus.
 This FW uses EEPROM, however no programming of EEPROM is required. There should
 be just an empty EEPROM on fresh devices.
 
+Flash main application, fuses & bootloader:
+
 ```bash
 $ cd bootloader
 $ make
 $ cd ..
 $ make
 $ make fuses
+$ make program
+```
+
+Flash fuses & bootloader only:
+
+```bash
+$ make fuses
+$ cd bootloader
+$ make
 $ make program
 ```
 
