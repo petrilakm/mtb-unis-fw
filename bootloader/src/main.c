@@ -52,7 +52,8 @@ typedef union {
 
 volatile error_flags_t error_flags = {0};
 
-volatile uint8_t page;
+volatile uint8_t page = 0xFF;
+volatile uint8_t subpage = 0xFF;
 volatile bool page_erase = false;
 volatile bool page_write = false;
 
@@ -65,12 +66,16 @@ int main() {
 	wdt_disable();
 	io_init();
 
+	io_led_red_on();
+
+	// Setup timer 3 @ 2.5 Hz (period 400 ms)
+	TCCR3B = (1 << WGM12) | (1 << CS12); // CTC mode, 256× prescaler
+	ETIMSK |= (1 << OCIE3A); // enable compare match interrupt
+	OCR3A = 23020;
+
 	uint8_t boot = eeprom_read_byte(EEPROM_ADDR_BOOT);
-	/*if (boot != CONFIG_BOOT_FWUPGD) {
-		if (fwcrc_ok())
-			main_program();
-		error_flags.bits.crc = true;
-	}*/
+	if ((boot != CONFIG_BOOT_FWUPGD) && (io_button()))
+		check_and_boot();
 
 	// Not booting → start MTBbus
 	_mtbbus_init();
@@ -89,10 +94,8 @@ int main() {
 			boot_page_write(SPM_PAGESIZE*page);
 			boot_spm_busy_wait();
 			page_write = false;
+			page = 0xFF; // reset so next write will erase flash first
 		}
-
-		if (error_flags.all > 0)
-			io_led_red_on();
 	}
 
 	return 0;
@@ -119,8 +122,8 @@ static inline void check_and_boot() {
 static inline void main_program() {
 	boot_rww_enable();
 	cli();
-	MCUCR |= (1 << IVCE);
-	MCUCR &= ~(1 << IVSEL); // move interrupts back to normal program
+	MCUCR = (1 << IVCE);
+	MCUCR = 0; // move interrupts back to normal program
 	__asm__ volatile ("ijmp" ::"z" (0));
 }
 
@@ -146,7 +149,10 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 		return;
 	}
 
-	if (command_code == MTBBUS_CMD_MOSI_INFO_REQ) {
+	if (command_code == MTBBUS_CMD_MOSI_MODULE_INQUIRY) {
+		mtbbus_send_ack();
+
+	} else if (command_code == MTBBUS_CMD_MOSI_INFO_REQ) {
 		mtbbus_output_buf[0] = 7;
 		mtbbus_output_buf[1] = MTBBUS_CMD_MISO_MODULE_INFO;
 		mtbbus_output_buf[2] = CONFIG_MODULE_TYPE;
@@ -167,8 +173,12 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 	} else if ((command_code == MTBBUS_CMD_MOSI_WRITE_FLASH) && (data_len >= 66)) {
 		uint8_t _page = data[0];
 		uint8_t _subpage = data[1];
-		if ((_subpage % 64 != 0) || (_page >= 240)) {
+		if ((_subpage % 32 != 0) || (_page >= 240)) {
 			mtbbus_send_error(MTBBUS_ERROR_BAD_ADDRESS);
+			return;
+		}
+		if (page_erase || page_write) {
+			mtbbus_send_error(MTBBUS_ERROR_BUSY);
 			return;
 		}
 
@@ -177,13 +187,14 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 			page = _page;
 			page_erase = true;
 		}
+		subpage = _subpage;
 
-		for (size_t i = 0; i < 32; i++) {
-			uint16_t word = data[2*i+2] | (data[2*i+3] << 8);
-			boot_page_fill(SPM_PAGESIZE*page + (_subpage/2) + i, word);
+		for (size_t i = 0; i < 32; i += 2) {
+			uint16_t word = data[i+2] | (data[i+3] << 8);
+			boot_page_fill(SPM_PAGESIZE*page + _subpage + i, word);
 		}
 
-		if (_subpage == (SPM_PAGESIZE/64)-1) {
+		if (_subpage == SPM_PAGESIZE-32) {
 			// last subpage → write whole page
 			page_write = true;
 		}
@@ -191,10 +202,11 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 		mtbbus_send_ack();
 
 	} else if (command_code == MTBBUS_CMD_MOSI_WRITE_FLASH_STATUS_REQ) {
-		mtbbus_output_buf[0] = 3;
+		mtbbus_output_buf[0] = 4;
 		mtbbus_output_buf[1] = MTBBUS_CMD_MISO_WRITE_FLASH_STATUS;
-		mtbbus_output_buf[2] = page;
-		mtbbus_output_buf[3] = (page_erase || page_write);
+		mtbbus_output_buf[2] = (page_erase || page_write);
+		mtbbus_output_buf[3] = page;
+		mtbbus_output_buf[4] = subpage;
 		mtbbus_send_buf_autolen();
 
 	} else if (command_code == MTBBUS_CMD_MOSI_REBOOT) {
@@ -217,6 +229,13 @@ static void mtbbus_send_error(uint8_t code) {
 	mtbbus_output_buf[1] = MTBBUS_CMD_MISO_ERROR;
 	mtbbus_output_buf[2] = code;
 	mtbbus_send_buf_autolen();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ISR(TIMER3_COMPA_vect) {
+	io_led_red_toggle();
+	io_led_green_toggle();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

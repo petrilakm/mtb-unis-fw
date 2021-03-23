@@ -94,9 +94,6 @@ def calc_crc(in_filename: str, out_filename: str, crc_addr: int) -> None:
                     databyte = int(data[i:i+2], base=16)
                     crc = crc16modbus_byte(crc, databyte)
 
-            if nextaddr % PAGESIZE == 0:
-                print(f'{nextaddr}: {hex(crc)}')
-
             outfile.write(line)
 
 
