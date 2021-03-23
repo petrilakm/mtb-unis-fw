@@ -89,12 +89,12 @@ static inline void init() {
 
 	// Setup timer 1 @ 10 kHz (period 100 us)
 	TCCR1B = (1 << WGM12) | (1 << CS10); // CTC mode, no prescaler
-	TIMSK |= (1 << OCIE1A); // enable compare match interrupt
+	TIMSK = (1 << OCIE1A); // enable compare match interrupt
 	OCR1A = 1473;
 
 	// Setup timer 3 @ 100 Hz (period 10 ms)
 	TCCR3B = (1 << WGM12) | (1 << CS11) | (1 << CS10); // CTC mode, 64× prescaler
-	ETIMSK |= (1 << OCIE3A); // enable compare match interrupt
+	ETIMSK = (1 << OCIE3A); // enable compare match interrupt
 	OCR3A = 2302;
 
 	config_load();

@@ -74,7 +74,7 @@ int main() {
 
 	// Setup timer 3 @ 2.5 Hz (period 400 ms)
 	TCCR3B = (1 << WGM12) | (1 << CS12); // CTC mode, 256× prescaler
-	ETIMSK |= (1 << OCIE3A); // enable compare match interrupt
+	ETIMSK = (1 << OCIE3A); // enable compare match interrupt
 	OCR3A = 23020;
 
 	uint8_t boot = eeprom_read_byte(EEPROM_ADDR_BOOT);

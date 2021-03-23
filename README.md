@@ -27,6 +27,9 @@ This FW uses EEPROM, however no programming of EEPROM is required. There should
 be just an empty EEPROM on fresh devices.
 
 ```bash
+$ cd bootloader
+$ make
+$ cd ..
 $ make
 $ make fuses
 $ make program
