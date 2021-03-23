@@ -307,5 +307,7 @@ void mtbbus_send_error(uint8_t code) {
 ///////////////////////////////////////////////////////////////////////////////
 
 static inline void goto_bootloader() {
-	__asm__ volatile ("ijmp" ::"z" (BOOTLOADER_ADDR));
+	wdt_enable(WDTO_15MS);
+	while (true);
+	//__asm__ volatile ("ijmp" ::"z" (BOOTLOADER_ADDR));
 }

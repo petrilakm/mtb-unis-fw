@@ -78,7 +78,7 @@ int main() {
 	OCR3A = 23020;
 
 	uint8_t boot = eeprom_read_byte(EEPROM_ADDR_BOOT);
-	if (boot == CONFIG_BOOT_FWUPGD)
+	if (boot != CONFIG_BOOT_NORMAL)
 		eeprom_write_byte(EEPROM_ADDR_BOOT, CONFIG_BOOT_NORMAL);
 	if ((boot != CONFIG_BOOT_FWUPGD) && (io_button()))
 		check_and_boot();
@@ -126,7 +126,7 @@ static inline void check_and_boot() {
 }
 
 static inline void main_program() {
-	boot_rww_enable();
+	boot_rww_enable_safe();
 	cli();
 	MCUCR = (1 << IVCE);
 	MCUCR = 0; // move interrupts back to normal program
@@ -217,6 +217,9 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 
 	} else if (command_code == MTBBUS_CMD_MOSI_REBOOT) {
 		mtbbus_on_sent = &check_and_boot;
+		mtbbus_send_ack();
+
+	} else if ((command_code == MTBBUS_CMD_MOSI_FWUPGD_REQUEST) && (data_len >= 1)) {
 		mtbbus_send_ack();
 
 	} else {

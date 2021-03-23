@@ -9,9 +9,11 @@ OBJDIR = obj
 SRC = $(wildcard src/*.c) $(wildcard lib/*.c)
 OPT = 2
 CSTANDARD = c99
+DEBUG = dwarf-2
 
 CDEFS = -DF_CPU=$(F_CPU)UL
 
+CFLAGS = -g$(DEBUG)
 CFLAGS += $(CDEFS)
 CFLAGS += -O$(OPT)
 CFLAGS += -Wall
