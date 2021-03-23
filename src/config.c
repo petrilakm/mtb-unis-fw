@@ -40,10 +40,10 @@ void config_load() {
 }
 
 void config_save() {
-	eeprom_write_byte(EEPROM_ADDR_VERSION, 1);
-	eeprom_write_byte(EEPROM_ADDR_MTBBUS_SPEED, config_mtbbus_speed);
-	eeprom_write_block(config_safe_state, EEPROM_ADDR_SAFE_STATE, NO_OUTPUTS);
-	eeprom_write_block(config_inputs_delay, EEPROM_ADDR_INPUTS_DELAY, NO_OUTPUTS/2);
+	eeprom_update_byte(EEPROM_ADDR_VERSION, 1);
+	eeprom_update_byte(EEPROM_ADDR_MTBBUS_SPEED, config_mtbbus_speed);
+	eeprom_update_block(config_safe_state, EEPROM_ADDR_SAFE_STATE, NO_OUTPUTS);
+	eeprom_update_block(config_inputs_delay, EEPROM_ADDR_INPUTS_DELAY, NO_OUTPUTS/2);
 }
 
 uint8_t input_delay(uint8_t input) {
@@ -54,9 +54,9 @@ uint8_t input_delay(uint8_t input) {
 }
 
 void config_boot_fwupgd() {
-	eeprom_write_byte(EEPROM_ADDR_BOOT, CONFIG_BOOT_FWUPGD);
+	eeprom_update_byte(EEPROM_ADDR_BOOT, CONFIG_BOOT_FWUPGD);
 }
 
 void config_boot_normal() {
-	eeprom_write_byte(EEPROM_ADDR_BOOT, CONFIG_BOOT_NORMAL);
+	eeprom_update_byte(EEPROM_ADDR_BOOT, CONFIG_BOOT_NORMAL);
 }
