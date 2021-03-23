@@ -7,7 +7,7 @@ BUILDDIR = build
 TARGET = $(BUILDDIR)/mtb-uni-v4-bootloader
 OBJDIR = obj
 SRC = $(wildcard src/*.c) $(wildcard lib/*.c)
-OPT = 2
+OPT = s
 CSTANDARD = c99
 CDEFS = -DF_CPU=$(F_CPU)UL
 DEBUG = dwarf-2
