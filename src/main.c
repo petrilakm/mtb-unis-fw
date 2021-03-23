@@ -25,6 +25,7 @@ void mtbbus_send_ack();
 void mtbbus_send_inputs(uint8_t message_code);
 void mtbbus_send_error(uint8_t code);
 static inline void leds_update();
+static inline void goto_bootloader();
 void led_red_ok();
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -300,3 +301,8 @@ void mtbbus_send_error(uint8_t code) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+static inline void goto_bootloader() {
+	#define BOOTLOADER_ADDR 0xF000
+	__asm__ volatile ("ijmp" ::"z" (BOOTLOADER_ADDR));
+}

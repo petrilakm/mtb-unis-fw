@@ -1,6 +1,6 @@
 MCU = atmega128
-CRC_POS = 0xEFFE
-FUSES = -U lfuse:w:0x7E:m -U hfuse:w:0xC0:m -U efuse:w:0xFF:m -U lock:w:0xEF:m
+CRC_POS = 0xEF00
+FUSES = -U lfuse:w:0x3E:m -U hfuse:w:0xC0:m -U efuse:w:0xFF:m -U lock:w:0xFF:m
 F_CPU = 14745600
 FORMAT = ihex
 BUILDDIR = build
@@ -20,13 +20,13 @@ CFLAGS += -Wa,-adhlns=$(<:%.c=$(OBJDIR)/%.lst)
 CFLAGS += -std=$(CSTANDARD)
 
 LDFLAGS = -Wl,-Map=$(TARGET).map,--cref
-LDFLAGS += -Wl,-section-start=.fwattr=0xEFFE
+LDFLAGS += -Wl,-section-start=.fwattr=$(CRC_POS)
 
 #---------------- Programming Options (avrdude) ----------------
 
 AVRDUDE_PROGRAMMER = stk500
 AVRDUDE_PORT = /dev/ttyUSB0
-AVRDUDE_WRITE_FLASH = -U flash:w:$(TARGET).hex
+AVRDUDE_WRITE_FLASH = -U flash:w:$(TARGET)_with_bootloader.hex
 AVRDUDE_WRITE_EEPROM = -U eeprom:w:$(TARGET).eep
 AVRDUDE_FLAGS = -p $(MCU) -P $(AVRDUDE_PORT) -c $(AVRDUDE_PROGRAMMER)
 
@@ -87,7 +87,7 @@ sizeafter:
 	@if test -f $(TARGET).elf; then echo; echo $(MSG_SIZE_AFTER); $(ELFSIZE); \
 	2>/dev/null; echo; fi
 
-program: $(TARGET).hex $(TARGET).eep
+program: $(TARGET)_with_bootloader.hex $(TARGET).eep
 	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH)
 
 fuses:

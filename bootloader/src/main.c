@@ -2,6 +2,9 @@
 #include <util/delay.h>
 #include <avr/interrupt.h>
 #include <avr/io.h>
+#include <avr/wdt.h>
+#include <avr/eeprom.h>
+#include <avr/boot.h>
 
 #include "io.h"
 
@@ -10,6 +13,7 @@
 
 int main();
 static inline void init();
+static inline void main_program();
 
 ///////////////////////////////////////////////////////////////////////////////
 // Defines & global variables
@@ -19,14 +23,18 @@ static inline void init();
 
 int main() {
 	init();
-	return 0;
+	io_led_green_on();
+	_delay_ms(500);
+	io_led_green_off();
+	main_program();
 }
 
 static inline void init() {
+	cli();
+	wdt_disable();
 	io_init();
-	io_led_green_on();
-	while (true) {
-		io_led_green_toggle();
-		_delay_ms(200);
-	}
+}
+
+static inline void main_program() {
+	__asm__ volatile ("ijmp" ::"z" (0));
 }
