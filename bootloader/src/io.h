@@ -11,6 +11,8 @@
 #define INPUT_BUTTON PING4
 
 static inline void io_init() {
+	DDRD = 0; // disable outputs 7-0
+	DDRC = 0; // disable outputs 15-8
 	DDRB |= 0xC0; // LEDs PB6 (red), PB7 (green)
 	DDRG |= 0x08; // LED PG3 (blue)
 	PORTG |= 0x10; // button pull-up

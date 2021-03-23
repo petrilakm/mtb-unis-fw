@@ -69,6 +69,8 @@ int main() {
 	io_init();
 
 	io_led_red_on();
+	io_led_green_off();
+	io_led_blue_off();
 
 	// Setup timer 3 @ 2.5 Hz (period 400 ms)
 	TCCR3B = (1 << WGM12) | (1 << CS12); // CTC mode, 256× prescaler
