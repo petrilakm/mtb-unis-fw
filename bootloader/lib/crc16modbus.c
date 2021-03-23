@@ -1,28 +1,6 @@
 #include <avr/pgmspace.h>
 #include "crc16modbus.h"
 
-uint16_t crc16modbus_bit(uint16_t crc, void const *mem, size_t len) {
-    unsigned char const *data = mem;
-    if (data == NULL)
-        return 0xffff;
-    for (size_t i = 0; i < len; i++) {
-        crc ^= data[i];
-        for (unsigned k = 0; k < 8; k++) {
-            crc = crc & 1 ? (crc >> 1) ^ 0xa001 : crc >> 1;
-        }
-    }
-    return crc;
-}
-
-uint16_t crc16modbus_rem(uint16_t crc, unsigned val, unsigned bits) {
-    val &= (1U << bits) - 1;
-    crc ^= val;
-    for (unsigned i = 0; i < bits; i++) {
-        crc = crc & 1 ? (crc >> 1) ^ 0xa001 : crc >> 1;
-    }
-    return crc;
-}
-
 static uint16_t const table_byte[256] PROGMEM = {
     0x0000, 0xc0c1, 0xc181, 0x0140, 0xc301, 0x03c0, 0x0280, 0xc241, 0xc601, 0x06c0,
     0x0780, 0xc741, 0x0500, 0xc5c1, 0xc481, 0x0440, 0xcc01, 0x0cc0, 0x0d80, 0xcd41,

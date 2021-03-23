@@ -13,12 +13,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-// Compute the CRC a bit at a time.
-uint16_t crc16modbus_bit(uint16_t crc, void const *mem, size_t len);
-
-// Compute the CRC of the low bits bits in val.
-uint16_t crc16modbus_rem(uint16_t crc, unsigned val, unsigned bits);
-
 // Compute the CRC a byte at a time.
 uint16_t crc16modbus_bytes(uint16_t crc, void const *mem, size_t len);
 uint16_t crc16modbus_byte(uint16_t crc, uint8_t byte);
