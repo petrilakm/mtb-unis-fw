@@ -95,7 +95,8 @@ fuses:
 
 $(TARGET)_with_bootloader.hex: $(TARGET).hex bootloader/build/mtb-uni-v4-bootloader.hex
 	head -n -1 $< > $@
-	cat bootloader/build/mtb-uni-v4-bootloader.hex >> $@
+	head -n1 bootloader/build/mtb-uni-v4-bootloader.hex >> $@ # omit second line, in contains .fwattr section
+	tail -n +3 bootloader/build/mtb-uni-v4-bootloader.hex >> $@
 
 $(BUILDDIR)/%.hex: $(BUILDDIR)/%.elf
 	@echo

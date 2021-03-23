@@ -33,6 +33,8 @@ CRC_16_MODBUS = [
     0x4380, 0x8341, 0x4100, 0x81c1, 0x8081, 0x4040,
 ]
 
+PAGESIZE = 256
+
 
 def crc16modbus_byte(crc: int, byte: int) -> int:
     return (crc >> 8) ^ CRC_16_MODBUS[(crc ^ byte) & 0xff]
@@ -55,7 +57,11 @@ def calc_crc(in_filename: str, out_filename: str, crc_addr: int) -> None:
                 offset = int(line[9:13], base=16)*16
 
             if type_ == 0 and offset+addr == crc_addr:
-                pages = math.ceil(nextaddr/256)
+                while nextaddr % PAGESIZE > 0:
+                    crc = crc16modbus_byte(crc, 0xFF)
+                    nextaddr += 1
+
+                pages = math.ceil(nextaddr//256)
                 print(f'Total {nextaddr} bytes = {pages} pages'
                       f', CRC is {hex(crc)}.')
                 data = [
@@ -64,8 +70,8 @@ def calc_crc(in_filename: str, out_filename: str, crc_addr: int) -> None:
                     crc_addr & 0xFF,
                     0,
                     pages,
-                    (crc >> 8) & 0xFF,
                     crc & 0xFF,
+                    (crc >> 8) & 0xFF,
                 ]
 
                 sum_ = 0
@@ -87,6 +93,9 @@ def calc_crc(in_filename: str, out_filename: str, crc_addr: int) -> None:
                 for i in range(0, len(data), 2):
                     databyte = int(data[i:i+2], base=16)
                     crc = crc16modbus_byte(crc, databyte)
+
+            if nextaddr % PAGESIZE == 0:
+                print(f'{nextaddr}: {hex(crc)}')
 
             outfile.write(line)
 

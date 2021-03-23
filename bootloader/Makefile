@@ -1,4 +1,5 @@
 MCU = atmega128
+CRC_POS = 0x1DF00
 F_CPU = 14745600
 FORMAT = ihex
 TARGET = build/mtb-uni-v4-bootloader
@@ -20,6 +21,7 @@ CFLAGS += -std=$(CSTANDARD)
 
 LDFLAGS = -Wl,-Map=$(TARGET).map,--cref
 LDFLAGS += -Wl,-Ttext=0x1E000
+LDFLAGS += -Wl,-section-start=.fwattr=$(CRC_POS)
 
 #---------------- Programming Options (avrdude) ----------------
 
