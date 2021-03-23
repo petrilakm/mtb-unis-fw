@@ -42,7 +42,7 @@ static void mtbbus_send_error(uint8_t code);
 __attribute__((used, section(".fwattr"))) struct {
 	uint8_t no_pages;
 	uint16_t crc;
-} fwattr;
+} fwattr = {0xFF, 0xFFFF};
 
 typedef union {
 	struct {
@@ -83,6 +83,7 @@ int main() {
 	if ((boot != CONFIG_BOOT_FWUPGD) && (io_button()))
 		check_and_boot();
 
+
 	// Not booting → start MTBbus
 	_mtbbus_init();
 	sei();
@@ -122,6 +123,7 @@ static inline void _mtbbus_init() {
 static inline void check_and_boot() {
 	if (fwcrc_ok())
 		main_program();
+
 	error_flags.bits.crc = true;
 }
 
@@ -138,6 +140,9 @@ static inline void main_program() {
 bool fwcrc_ok() {
 	uint8_t no_pages = pgm_read_byte_far(&fwattr.no_pages);
 	uint16_t crc_read = pgm_read_word_far(&fwattr.crc);
+
+	if ((no_pages == 0xFF) || (no_pages == 0))
+		return false;
 
 	uint16_t crc = 0;
 	for (size_t i = 0; i < no_pages; i++)
