@@ -16,6 +16,10 @@ static inline void io_init() {
 	PORTG |= 0x10; // button pull-up
 }
 
+static inline uint8_t io_get_addr_raw() {
+	return ~PINA;
+}
+
 static inline void io_led_red_on() { PORTB |= (1 << PB7); }
 static inline void io_led_red_off() { PORTB &= ~(1 << PB7); }
 static inline void io_led_green_on() { PORTB |= (1 << PB6); }
