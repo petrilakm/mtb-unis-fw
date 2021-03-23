@@ -29,6 +29,8 @@ static void mtbbus_send_error(uint8_t code);
 
 #define EEPROM_ADDR_MTBBUS_SPEED  ((uint8_t*)0x01)
 #define EEPROM_ADDR_BOOT          ((uint8_t*)0x03)
+
+#define CONFIG_BOOT_NORMAL 0x00
 #define CONFIG_BOOT_FWUPGD 0x01
 
 #define CONFIG_MODULE_TYPE 0x15
@@ -74,6 +76,8 @@ int main() {
 	OCR3A = 23020;
 
 	uint8_t boot = eeprom_read_byte(EEPROM_ADDR_BOOT);
+	if (boot == CONFIG_BOOT_FWUPGD)
+		eeprom_write_byte(EEPROM_ADDR_BOOT, CONFIG_BOOT_NORMAL);
 	if ((boot != CONFIG_BOOT_FWUPGD) && (io_button()))
 		check_and_boot();
 
