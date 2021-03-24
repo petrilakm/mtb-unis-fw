@@ -61,7 +61,7 @@ def calc_crc(in_filename: str, out_filename: str, crc_addr: int) -> None:
                     crc = crc16modbus_byte(crc, 0xFF)
                     nextaddr += 1
 
-                pages = math.ceil(nextaddr//256)
+                pages = math.ceil(nextaddr//PAGESIZE)
                 print(f'Total {nextaddr} bytes = {pages} pages'
                       f', CRC is {hex(crc)}.')
                 data = [
