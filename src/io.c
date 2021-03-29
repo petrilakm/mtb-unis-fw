@@ -1,4 +1,5 @@
 #include <avr/io.h>
+#include <avr/delay.h>
 
 #include "io.h"
 #include "common.h"
@@ -6,9 +7,10 @@
 void io_init() {
 	DDRD = 0xFF; // outputs 7-0
 	DDRC = 0xFF; // outputs 15-8
-	DDRB |= 0xC0; // LEDs PB6 (red), PB7 (green)
-	DDRG |= 0x08; // LED PG3 (blue)
-	PORTG |= 0x10; // button pull-up
+	DDRB = (1 << PIN_LED_RED) | (1 << PIN_LED_GREEN);
+	DDRG = (1 << PIN_LED_BLUE);
+	PORTG = (1 << PIN_BUTTON); // button pull-up
+	PORTE = (1 << PIN_UART_RX); // RX pull-up
 }
 
 bool io_get_input_raw(uint8_t inum) {

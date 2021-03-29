@@ -27,6 +27,7 @@ void mtbbus_send_inputs(uint8_t message_code);
 void mtbbus_send_error(uint8_t code);
 static inline void leds_update();
 static inline void goto_bootloader();
+static inline void update_mtbbus_polarity();
 void led_red_ok();
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -47,6 +48,7 @@ volatile uint8_t led_red_counter = 0;
 typedef union {
 	struct {
 		bool addr_zero : 1;
+		bool bad_mtbbus_polarity : 1;
 	} bits;
 	uint8_t all;
 } error_flags_t;
@@ -104,6 +106,8 @@ static inline void init() {
 	error_flags.bits.addr_zero = (_mtbbus_addr == 0);
 	mtbbus_init(_mtbbus_addr, config_mtbbus_speed);
 	mtbbus_on_receive = mtbbus_received;
+
+	update_mtbbus_polarity();
 
 	_delay_ms(50);
 
@@ -179,6 +183,7 @@ void btn_on_pressed() {
 	mtbbus_addr = _mtbbus_addr;
 	if (mtbbus_addr != 0)
 		led_red_ok();
+	update_mtbbus_polarity();
 }
 
 void btn_on_depressed() {}
@@ -186,6 +191,7 @@ void btn_on_depressed() {}
 ///////////////////////////////////////////////////////////////////////////////
 
 void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len) {
+	error_flags.bits.bad_mtbbus_polarity = false;
 	if (led_gr_counter == 0) {
 		io_led_green_on();
 		led_gr_counter = LED_GR_ON;
@@ -310,4 +316,8 @@ static inline void goto_bootloader() {
 	wdt_enable(WDTO_15MS);
 	while (true);
 	//__asm__ volatile ("ijmp" ::"z" (BOOTLOADER_ADDR));
+}
+
+static inline void update_mtbbus_polarity() {
+	error_flags.bits.bad_mtbbus_polarity = !((PINE >> PIN_UART_RX) & 0x1);
 }
