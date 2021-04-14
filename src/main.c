@@ -269,6 +269,9 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 		config_write = true;
 		mtbbus_set_speed(data[0]);
 
+		if (!broadcast)
+			mtbbus_send_ack();
+
 	} else if ((command_code == MTBBUS_CMD_MOSI_FWUPGD_REQUEST) && (data_len >= 1) && (!broadcast)) {
 		config_boot_fwupgd();
 		mtbbus_on_sent = &goto_bootloader;
