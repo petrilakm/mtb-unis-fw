@@ -230,11 +230,12 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 		mtbbus_send_ack();
 
 	} else if ((command_code == MTBBUS_CMD_MOSI_GET_CONFIG) && (!broadcast)) {
-		mtbbus_output_buf[0] = 24;
+		mtbbus_output_buf[0] = 25;
+		mtbbus_output_buf[1] = MTBBUS_CMD_MISO_MODULE_CONFIG;
 		for (size_t i = 0; i < NO_OUTPUTS; i++)
-			mtbbus_output_buf[1+i] = config_safe_state[i];
+			mtbbus_output_buf[2+i] = config_safe_state[i];
 		for (size_t i = 0; i < NO_OUTPUTS/2; i++)
-			mtbbus_output_buf[1+NO_OUTPUTS+i] = config_inputs_delay[i];
+			mtbbus_output_buf[2+NO_OUTPUTS+i] = config_inputs_delay[i];
 		mtbbus_send_buf_autolen();
 
 	} else if ((command_code == MTBBUS_CMD_MOSI_BEACON) && (data_len >= 1)) {
@@ -248,9 +249,10 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 	} else if ((command_code == MTBBUS_CMD_MOSI_SET_OUTPUT) && (data_len >= 4) && (!broadcast)) {
 		outputs_set_zipped(data, data_len);
 
-		mtbbus_output_buf[0] = data_len;
+		mtbbus_output_buf[0] = data_len+1;
+		mtbbus_output_buf[1] = MTBBUS_CMD_MISO_OUTPUT_SET;
 		for (size_t i = 0; i < data_len; i++)
-			mtbbus_output_buf[1+i] = data[i];
+			mtbbus_output_buf[2+i] = data[i];
 		mtbbus_send_buf_autolen();
 
 	} else if (command_code == MTBBUS_CMD_MOSI_RESET_OUTPUTS) {
