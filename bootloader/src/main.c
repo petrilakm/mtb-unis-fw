@@ -155,10 +155,8 @@ bool fwcrc_ok() {
 ///////////////////////////////////////////////////////////////////////////////
 
 void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len) {
-	if (broadcast) {
-		mtbbus_send_error(MTBBUS_ERROR_UNSUPPORTED_COMMAND);
+	if (broadcast)
 		return;
-	}
 
 	if (command_code == MTBBUS_CMD_MOSI_MODULE_INQUIRY) {
 		mtbbus_send_ack();
