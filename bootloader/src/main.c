@@ -182,7 +182,7 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 	} else if ((command_code == MTBBUS_CMD_MOSI_WRITE_FLASH) && (data_len >= 66)) {
 		uint8_t _page = data[0];
 		uint8_t _subpage = data[1];
-		if ((_subpage % 32 != 0) || (_page >= 240)) {
+		if ((_subpage % 64 != 0) || (_page >= 240)) {
 			mtbbus_send_error(MTBBUS_ERROR_BAD_ADDRESS);
 			return;
 		}
@@ -198,12 +198,12 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 		}
 		subpage = _subpage;
 
-		for (size_t i = 0; i < 32; i += 2) {
+		for (size_t i = 0; i < 64; i += 2) {
 			uint16_t word = data[i+2] | (data[i+3] << 8);
 			boot_page_fill(SPM_PAGESIZE*page + _subpage + i, word);
 		}
 
-		if (_subpage == SPM_PAGESIZE-32) {
+		if (_subpage == SPM_PAGESIZE-64) {
 			// last subpage → write whole page
 			page_write = true;
 		}
