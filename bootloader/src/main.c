@@ -15,7 +15,7 @@
 // Function prototypes
 
 int main();
-static inline void check_and_boot();
+void check_and_boot();
 static inline void main_program();
 bool fwcrc_ok();
 static inline void _mtbbus_init();
@@ -120,7 +120,7 @@ static inline void _mtbbus_init() {
 	mtbbus_on_receive = mtbbus_received;
 }
 
-static inline void check_and_boot() {
+void check_and_boot() {
 	if (fwcrc_ok())
 		main_program();
 
