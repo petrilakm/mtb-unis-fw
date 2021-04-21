@@ -128,7 +128,6 @@ void check_and_boot() {
 }
 
 static inline void main_program() {
-	boot_rww_enable_safe();
 	cli();
 	MCUCR = (1 << IVCE);
 	MCUCR = 0; // move interrupts back to normal program
@@ -138,6 +137,7 @@ static inline void main_program() {
 ///////////////////////////////////////////////////////////////////////////////
 
 bool fwcrc_ok() {
+	boot_rww_enable_safe();
 	uint8_t no_pages = pgm_read_byte_far(&fwattr.no_pages);
 	uint16_t crc_read = pgm_read_word_far(&fwattr.crc);
 
