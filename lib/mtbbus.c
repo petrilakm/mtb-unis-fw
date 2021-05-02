@@ -50,13 +50,13 @@ void mtbbus_set_speed(uint8_t speed) {
 	UBRR0H = 0;
 
 	if (speed == MTBBUS_SPEED_115200)
-		UBRR0L = 15;
+		UBRR0L = 7;
 	else if (speed == MTBBUS_SPEED_57600)
-		UBRR0L = 31;
+		UBRR0L = 15;
 	else
-		UBRR0L = 47; // 38400 Bd
+		UBRR0L = 23; // 38400 Bd
 
-	UCSR0A |= _BV(U2X0);
+	UCSR0A &= ~_BV(U2X0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
