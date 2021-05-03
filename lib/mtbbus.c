@@ -41,7 +41,8 @@ void mtbbus_init(uint8_t addr, uint8_t speed) {
 	mtbbus_set_speed(speed);
 
 	UCSR0C = _BV(UCSZ01) | _BV(UCSZ00); // 9-bit data
-	UCSR0B = _BV(RXCIE0) | _BV(TXCIE0) | _BV(UCSZ02) | _BV(RXEN0) | _BV(TXEN0);  // RX, TX enable; RT, TX interrupt enable
+	UCSR0A = _BV(MPCM0); // Mutli-processor mode, receive onyl if 9. bit = 1
+	UCSR0B = _BV(RXCIE0) | _BV(TXCIE0) | _BV(UCSZ02) | _BV(RXEN0) | _BV(TXEN0);  // RX, TX enable; RX, TX interrupt enable
 }
 
 
@@ -154,6 +155,7 @@ static inline void _mtbbus_received_ninth(uint8_t data) {
 	received_addr = data;
 
 	if ((received_addr == mtbbus_addr) || (received_addr == 0)) {
+		UCSR0A &= ~_BV(MPCM0); // Receive rest of message
 		receiving = true;
 		mtbbus_input_buf_size = 0;
 		received_crc = crc16modbus_byte(0, received_addr);
@@ -184,5 +186,6 @@ static inline void _mtbbus_received_non_ninth(uint8_t data) {
 		receiving = false;
 		received_crc = 0;
 		mtbbus_input_buf_size = 0;
+		UCSR0A |= _BV(MPCM0); // Receive only if 9. bit = 1
 	}
 }
