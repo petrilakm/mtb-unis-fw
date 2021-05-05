@@ -157,6 +157,7 @@ bool fwcrc_ok() {
 void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len) {
 	if (broadcast)
 		return;
+	_delay_us(2);
 
 	if (command_code == MTBBUS_CMD_MOSI_MODULE_INQUIRY) {
 		mtbbus_send_ack();
