@@ -62,6 +62,8 @@ volatile bool beacon = false;
 volatile uint8_t led_blue_counter = 0;
 
 volatile bool inputs_debounce_to_update = false;
+volatile bool scom_to_update = false;
+volatile bool outputs_changed_when_setting_scom = false;
 
 __attribute__((used, section(".fwattr"))) struct {
 	uint8_t no_pages;
@@ -74,6 +76,13 @@ int main() {
 	init();
 
 	while (true) {
+		if (scom_to_update) {
+			outputs_changed_when_setting_scom = false;
+			scom_update();
+			scom_to_update = false;
+			if (outputs_changed_when_setting_scom)
+				outputs_apply_state();
+		}
 		if (inputs_debounce_to_update) {
 			inputs_debounce_update();
 			inputs_debounce_to_update = false;
@@ -133,12 +142,10 @@ ISR(TIMER1_COMPA_vect) {
 
 ISR(TIMER3_COMPA_vect) {
 	// Timer 3 @ 100 Hz (period 10 ms)
-	io_led_red_on();
-	scom_update();
+	scom_to_update = true;
 	outputs_update();
 	inputs_fall_update();
 	leds_update();
-	io_led_red_off();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -258,6 +265,7 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 
 	} else if ((command_code == MTBBUS_CMD_MOSI_SET_OUTPUT) && (data_len >= 4) && (!broadcast)) {
 		outputs_set_zipped(data, data_len);
+		outputs_changed_when_setting_scom = true;
 
 		mtbbus_output_buf[0] = data_len+1;
 		mtbbus_output_buf[1] = MTBBUS_CMD_MISO_OUTPUT_SET;

@@ -14,5 +14,6 @@
 void outputs_set_zipped(uint8_t data[], size_t length);
 void outputs_set_full(uint8_t data[NO_OUTPUTS]);
 void outputs_update(); // should be called each 10 ms
+void outputs_apply_state();
 
 #endif

@@ -24,7 +24,7 @@ bool _flicker_enabled[NO_OUTPUTS] = {false, };
 // ‹https://github.com/kmzbrnoI/mtbbus-protocol/blob/master/modules/uni.md›
 uint8_t _outputs_state[NO_OUTPUTS] = {0, };
 
-static void _apply_state() {
+void outputs_apply_state() {
 	uint16_t plain_mask = 0;
 	uint16_t plain_state = 0;
 
@@ -73,13 +73,13 @@ void outputs_set_zipped(uint8_t data[], size_t length) {
 		bin_state >>= 1;
 	}
 
-	_apply_state();
+	outputs_apply_state();
 }
 
 void outputs_set_full(uint8_t data[NO_OUTPUTS]) {
 	for (size_t i = 0; i < NO_OUTPUTS; i++)
 		_outputs_state[i] = data[i];
-	_apply_state();
+	outputs_apply_state();
 }
 
 void outputs_update() {
