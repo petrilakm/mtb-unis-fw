@@ -61,6 +61,8 @@ volatile bool beacon = false;
 #define LED_BLUE_BEACON_OFF 50
 volatile uint8_t led_blue_counter = 0;
 
+volatile bool inputs_debounce_to_update = false;
+
 __attribute__((used, section(".fwattr"))) struct {
 	uint8_t no_pages;
 	uint16_t crc;
@@ -72,13 +74,18 @@ int main() {
 	init();
 
 	while (true) {
+		if (inputs_debounce_to_update) {
+			inputs_debounce_update();
+			inputs_debounce_to_update = false;
+		}
+
 		if (config_write) {
 			config_save();
 			config_write = false;
 		}
 
 		wdt_reset();
-		_delay_ms(10);
+		_delay_us(50);
 	}
 }
 
@@ -92,7 +99,7 @@ static inline void init() {
 	// Setup timer 1 @ 10 kHz (period 100 us)
 	TCCR1B = (1 << WGM12) | (1 << CS10); // CTC mode, no prescaler
 	TIMSK = (1 << OCIE1A); // enable compare match interrupt
-	OCR1A = 1473;
+	OCR1A = 7365;
 
 	// Setup timer 3 @ 100 Hz (period 10 ms)
 	TCCR3B = (1 << WGM12) | (1 << CS11) | (1 << CS10); // CTC mode, 64× prescaler
@@ -120,16 +127,18 @@ static inline void init() {
 }
 
 ISR(TIMER1_COMPA_vect) {
-	// Timer 1 @ 10 kHz (period 100 us)
-	inputs_debounce_update();
+	// Timer 1 @ 2 kHz (period 500 us)
+	inputs_debounce_to_update = true;
 }
 
 ISR(TIMER3_COMPA_vect) {
 	// Timer 3 @ 100 Hz (period 10 ms)
+	io_led_red_on();
 	scom_update();
 	outputs_update();
 	inputs_fall_update();
 	leds_update();
+	io_led_red_off();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -3,22 +3,25 @@
 #include "io.h"
 #include "config.h"
 
-uint16_t inputs_logic_state= 0;
+uint16_t inputs_logic_state = 0;
 uint16_t inputs_debounced_state = 0;
 uint16_t inputs_old = 0;
 
 bool btn_pressed = false;
 
-#define DEBOUNCE_THRESHOLD 100 // 10 ms
+#define DEBOUNCE_THRESHOLD 20 // 10 ms
 uint8_t _inputs_debounce_counter[NO_INPUTS] = {0, };
 uint8_t _inputs_fall_counter[NO_INPUTS] = {0, };
 uint8_t _btn_debounce_counter = 0;
 
 
-static void _inputs_button_debuounce_update();
+static void _inputs_button_debounce_update();
 
 void inputs_debounce_update() {
 	uint16_t state = io_get_inputs_raw();
+	if (state != 0xFFFF)
+		io_led_red_toggle();
+
 	for (size_t i = 0; i < NO_INPUTS; i++) {
 		if (state & 0x01) { // state == 1 → logical 0
 			if (_inputs_debounce_counter[i] > 0) {
@@ -49,7 +52,7 @@ void inputs_debounce_update() {
 		state >>= 1;
 	}
 
-	_inputs_button_debuounce_update();
+	_inputs_button_debounce_update();
 }
 
 void inputs_fall_update() {
@@ -62,7 +65,7 @@ void inputs_fall_update() {
 	}
 }
 
-static void _inputs_button_debuounce_update() {
+static void _inputs_button_debounce_update() {
 	bool state = io_button();
 	if (state & 0x01) {
 		if (_btn_debounce_counter > 0) {
