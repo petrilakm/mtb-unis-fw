@@ -216,10 +216,12 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 
 	if ((!broadcast) && (command_code == MTBBUS_CMD_MOSI_MODULE_INQUIRY) && (data_len >= 1)) {
 		static bool last_input_changed = false;
+		static bool first_scan = true;
 		bool last_ok = data[0] & 0x01;
-		if ((inputs_logic_state != inputs_old) || (last_input_changed && !last_ok)) {
+		if ((inputs_logic_state != inputs_old) || (last_input_changed && !last_ok) || (first_scan)) {
 			// Send inputs changed
 			last_input_changed = true;
+			first_scan = false;
 			mtbbus_send_inputs(MTBBUS_CMD_MISO_INPUT_CHANGED);
 			inputs_old = inputs_logic_state;
 		} else {
