@@ -306,7 +306,8 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 		}
 
 	} else {
-		mtbbus_send_error(MTBBUS_ERROR_UNKNOWN_COMMAND);
+		if (!broadcast)
+			mtbbus_send_error(MTBBUS_ERROR_UNKNOWN_COMMAND);
 	}
 }
 
