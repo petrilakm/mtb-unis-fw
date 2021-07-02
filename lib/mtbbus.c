@@ -19,8 +19,8 @@ volatile uint8_t received_addr;
 
 uint8_t mtbbus_addr;
 uint8_t mtbbus_speed;
-void (*mtbbus_on_receive)(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len) = NULL;
-void (*mtbbus_on_sent)() = NULL;
+void (*volatile mtbbus_on_receive)(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len) = NULL;
+void (*volatile mtbbus_on_sent)() = NULL;
 
 ///////////////////////////////////////////////////////////////////////////////
 

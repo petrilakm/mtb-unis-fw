@@ -24,8 +24,8 @@ extern uint8_t mtbbus_speed;
 
 // ‹data› starts with Command code byte
 // ‹size› is amount of data bytes + 1
-extern void (*mtbbus_on_receive)(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len);
-extern void (*mtbbus_on_sent)();
+extern void (*volatile mtbbus_on_receive)(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len);
+extern void (*volatile mtbbus_on_sent)();
 
 #define MTBBUS_SPEED_38400 0x01
 #define MTBBUS_SPEED_57600 0x02
