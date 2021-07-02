@@ -29,6 +29,7 @@ static inline void leds_update();
 void goto_bootloader();
 static inline void update_mtbbus_polarity();
 void led_red_ok();
+static inline void on_initialized();
 
 ///////////////////////////////////////////////////////////////////////////////
 // Defines & global variables
@@ -69,6 +70,10 @@ __attribute__((used, section(".fwattr"))) struct {
 	uint8_t no_pages;
 	uint16_t crc;
 } fwattr;
+
+volatile bool initialized = false;
+volatile uint8_t _init_counter = 0;
+#define INIT_TIME 50 // 500 ms
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -125,14 +130,15 @@ static inline void init() {
 
 	update_mtbbus_polarity();
 
-	_delay_ms(50);
-
 	wdt_enable(WDTO_250MS);
-
 	sei(); // enable interrupts globally
+}
+
+static inline void on_initialized() {
 	io_led_red_off();
 	io_led_green_off();
 	io_led_blue_off();
+	initialized = true;
 }
 
 ISR(TIMER1_COMPA_vect) {
@@ -146,6 +152,12 @@ ISR(TIMER3_COMPA_vect) {
 	outputs_update();
 	inputs_fall_update();
 	leds_update();
+
+	if (_init_counter < INIT_TIME) {
+		_init_counter++;
+		if (_init_counter == INIT_TIME)
+			on_initialized();
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -208,6 +220,9 @@ void btn_on_depressed() {}
 ///////////////////////////////////////////////////////////////////////////////
 
 void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len) {
+	if (!initialized)
+		return;
+
 	error_flags.bits.bad_mtbbus_polarity = false;
 	if (led_gr_counter == 0) {
 		io_led_green_on();
