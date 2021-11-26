@@ -31,7 +31,7 @@ uint8_t input_delay(uint8_t input);
 #define CONFIG_FW_MAJOR 1
 #define CONFIG_FW_MINOR 4
 #define CONFIG_PROTO_MAJOR 4
-#define CONFIG_PROTO_MINOR 0
+#define CONFIG_PROTO_MINOR 1
 
 #define CONFIG_BOOT_FWUPGD 0x01
 #define CONFIG_BOOT_NORMAL 0x00

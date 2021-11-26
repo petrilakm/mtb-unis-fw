@@ -317,7 +317,8 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 		}
 
 	} else if ((command_code == MTBBUS_CMD_MOSI_INFO_REQ) && (!broadcast)) {
-		mtbbus_output_buf[0] = 7;
+		uint16_t bootloader_ver = config_bootloader_version();
+		mtbbus_output_buf[0] = 9;
 		mtbbus_output_buf[1] = MTBBUS_CMD_MISO_MODULE_INFO;
 		mtbbus_output_buf[2] = CONFIG_MODULE_TYPE;
 		mtbbus_output_buf[3] = (mtbbus_warn_flags.all > 0) << 2;
@@ -325,6 +326,8 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 		mtbbus_output_buf[5] = CONFIG_FW_MINOR;
 		mtbbus_output_buf[6] = CONFIG_PROTO_MAJOR;
 		mtbbus_output_buf[7] = CONFIG_PROTO_MINOR;
+		mtbbus_output_buf[8] = bootloader_ver >> 8;
+		mtbbus_output_buf[9] = bootloader_ver & 0xFF;
 		mtbbus_send_buf_autolen();
 
 	} else if ((command_code == MTBBUS_CMD_MOSI_SET_CONFIG) && (data_len >= 24) && (!broadcast)) {
