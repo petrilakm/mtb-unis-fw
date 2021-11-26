@@ -1,7 +1,7 @@
 #ifndef _INPUTS_H_
 #define _INPUTS_H_
 
-/* Inputs debouncing & holding in logical one per configured time.
+/* Inputs debouncing & holding in logical one for configured time.
  */
 
 #include <stdint.h>
