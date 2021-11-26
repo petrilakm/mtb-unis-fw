@@ -27,15 +27,17 @@ static void mtbbus_send_error(uint8_t code);
 ///////////////////////////////////////////////////////////////////////////////
 // Defines & global variables
 
-#define EEPROM_ADDR_MTBBUS_SPEED  ((uint8_t*)0x01)
-#define EEPROM_ADDR_BOOT          ((uint8_t*)0x03)
+#define EEPROM_ADDR_MTBBUS_SPEED           ((uint8_t*)0x01)
+#define EEPROM_ADDR_BOOT                   ((uint8_t*)0x03)
+#define EEPROM_ADDR_BOOTLOADER_VER_MAJOR   ((uint8_t*)0x08)
+#define EEPROM_ADDR_BOOTLOADER_VER_MINOR   ((uint8_t*)0x09)
 
 #define CONFIG_BOOT_NORMAL 0x00
 #define CONFIG_BOOT_FWUPGD 0x01
 
 #define CONFIG_MODULE_TYPE 0x15
 #define CONFIG_FW_MAJOR 1
-#define CONFIG_FW_MINOR 1
+#define CONFIG_FW_MINOR 2
 #define CONFIG_PROTO_MAJOR 4
 #define CONFIG_PROTO_MINOR 0
 
@@ -80,9 +82,12 @@ int main() {
 	uint8_t boot = eeprom_read_byte(EEPROM_ADDR_BOOT);
 	if (boot != CONFIG_BOOT_NORMAL)
 		eeprom_write_byte(EEPROM_ADDR_BOOT, CONFIG_BOOT_NORMAL);
+
+	eeprom_update_byte(EEPROM_ADDR_BOOTLOADER_VER_MAJOR, CONFIG_FW_MAJOR);
+	eeprom_update_byte(EEPROM_ADDR_BOOTLOADER_VER_MINOR, CONFIG_FW_MINOR);
+
 	if ((boot != CONFIG_BOOT_FWUPGD) && (io_button()))
 		check_and_boot();
-
 
 	// Not booting → start MTBbus
 	_mtbbus_init();
