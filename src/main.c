@@ -34,6 +34,20 @@ static inline void on_initialized();
 ///////////////////////////////////////////////////////////////////////////////
 // Defines & global variables
 
+typedef union {
+	struct {
+		bool porf : 1;
+		bool extrf : 1;
+		bool borf : 1;
+		bool wdrf : 1;
+		bool jtrf : 1;
+	} bits;
+	uint8_t all;
+} mcuscr_t;
+
+mcuscr_t mcucsr;
+
+
 #define BEACON_LED_RED // code for MTB-UNI v4.0 should define this variable
 
 #define LED_GR_ON 5
@@ -51,6 +65,7 @@ typedef union {
 		bool addr_zero : 1;
 		bool bad_mtbbus_polarity : 1;
 		bool missed_timer : 1;
+		bool bad_reset : 1;
 	} bits;
 	uint8_t all;
 } error_flags_t;
@@ -105,6 +120,21 @@ int main() {
 }
 
 static inline void init() {
+	cli();
+	wdt_disable();
+
+	// Check reset flags
+	mcucsr.all = MCUCSR;
+	MCUCSR = 0;
+
+	if (config_is_int_wdrf()) {
+		mcucsr.bits.wdrf = false;
+		config_int_wdrf(false);
+	}
+	mcucsr.bits.borf = false; // brownout detects basically all power-on resets
+	if (mcucsr.all > 1)
+		error_flags.bits.bad_reset = true;
+
 	io_init();
 	io_led_red_on();
 	io_led_green_on();
@@ -358,6 +388,7 @@ void mtbbus_send_error(uint8_t code) {
 ///////////////////////////////////////////////////////////////////////////////
 
 void goto_bootloader() {
+	config_int_wdrf(true);
 	wdt_enable(WDTO_15MS);
 	while (true);
 	//__asm__ volatile ("ijmp" ::"z" (BOOTLOADER_ADDR));

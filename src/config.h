@@ -20,11 +20,16 @@ void config_save();
 void config_boot_fwupgd();
 void config_boot_normal();
 
+void config_int_wdrf(bool value);
+bool config_is_int_wdrf();
+
+uint16_t config_bootloader_version();
+
 uint8_t input_delay(uint8_t input);
 
 #define CONFIG_MODULE_TYPE 0x15
 #define CONFIG_FW_MAJOR 1
-#define CONFIG_FW_MINOR 3
+#define CONFIG_FW_MINOR 4
 #define CONFIG_PROTO_MAJOR 4
 #define CONFIG_PROTO_MINOR 0
 

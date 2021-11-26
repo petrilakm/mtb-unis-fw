@@ -7,11 +7,14 @@ uint8_t config_inputs_delay[NO_OUTPUTS/2];
 bool config_write = false;
 uint8_t config_mtbbus_speed;
 
-#define EEPROM_ADDR_VERSION       ((uint8_t*)0x00)
-#define EEPROM_ADDR_MTBBUS_SPEED  ((uint8_t*)0x01)
-#define EEPROM_ADDR_BOOT          ((uint8_t*)0x03)
-#define EEPROM_ADDR_SAFE_STATE    ((void*)0x10)
-#define EEPROM_ADDR_INPUTS_DELAY  ((void*)0x20)
+#define EEPROM_ADDR_VERSION                ((uint8_t*)0x00)
+#define EEPROM_ADDR_MTBBUS_SPEED           ((uint8_t*)0x01)
+#define EEPROM_ADDR_INT_WDRF               ((uint8_t*)0x02)
+#define EEPROM_ADDR_BOOT                   ((uint8_t*)0x03)
+#define EEPROM_ADDR_BOOTLOADER_VER_MAJOR   ((uint8_t*)0x08)
+#define EEPROM_ADDR_BOOTLOADER_VER_MINOR   ((uint8_t*)0x09)
+#define EEPROM_ADDR_SAFE_STATE             ((void*)0x10)
+#define EEPROM_ADDR_INPUTS_DELAY           ((void*)0x20)
 
 
 void config_load() {
@@ -59,4 +62,18 @@ void config_boot_fwupgd() {
 
 void config_boot_normal() {
 	eeprom_update_byte(EEPROM_ADDR_BOOT, CONFIG_BOOT_NORMAL);
+}
+
+void config_int_wdrf(bool value) {
+	eeprom_update_byte(EEPROM_ADDR_INT_WDRF, value);
+}
+
+bool config_is_int_wdrf() {
+	return eeprom_read_byte(EEPROM_ADDR_INT_WDRF) & 1;
+}
+
+uint16_t config_bootloader_version() {
+	uint16_t version = (eeprom_read_byte(EEPROM_ADDR_BOOTLOADER_VER_MAJOR) << 8) |
+	                   (eeprom_read_byte(EEPROM_ADDR_BOOTLOADER_VER_MINOR));
+	return version == 0xFFFF ? 0x0101 : version;
 }
