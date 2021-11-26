@@ -1,5 +1,5 @@
 #include <avr/io.h>
-#include <avr/delay.h>
+#include <util/delay.h>
 
 #include "io.h"
 #include "common.h"
