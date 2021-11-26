@@ -152,8 +152,9 @@ static inline void init() {
 	mtbbus_on_receive = mtbbus_received;
 
 	update_mtbbus_polarity();
+	diag_init();
 
-	mtbbus_warn_flags_old = mtbbus_warn_flags;
+	mtbbus_warn_flags_old.all = 0xFF; // causes report of change to PC
 	wdt_enable(WDTO_250MS);
 	sei(); // enable interrupts globally
 }
@@ -199,6 +200,15 @@ ISR(TIMER3_COMPA_vect) {
 		mtbbus_auto_speed_timer++;
 		if (mtbbus_auto_speed_timer >= MTBBUS_AUTO_SPEED_TIMEOUT)
 			mtbbus_auto_speed_next();
+	}
+
+	{
+		static uint8_t diag_timer = 0;
+		diag_timer++;
+		if (diag_timer >= DIAG_UPDATE_PERIOD) {
+			diag_update();
+			diag_timer = 0;
+		}
 	}
 }
 
@@ -495,10 +505,24 @@ void send_diag_value(uint8_t i) {
 		mtbbus_output_buf[3] = (mtbbus_warn_flags.all > 0) << 1;
 		break;
 
+	case MTBBUS_DV_UPTIME:
+		mtbbus_output_buf[0] = 2+4;
+		mtbbus_output_buf[3] = (uptime_seconds >> 24);
+		mtbbus_output_buf[4] = (uptime_seconds >> 16) & 0xFF;
+		mtbbus_output_buf[5] = (uptime_seconds >> 8) & 0xFF;
+		mtbbus_output_buf[6] = (uptime_seconds) & 0xFF;
+		break;
+
 	case MTBBUS_DV_WARNINGS:
 		mtbbus_warn_flags_old = mtbbus_warn_flags;
 		mtbbus_output_buf[0] = 2+1;
 		mtbbus_output_buf[3] = mtbbus_warn_flags.all;
+		break;
+
+	case MTBBUS_DV_VMCU:
+		mtbbus_output_buf[0] = 2+2;
+		mtbbus_output_buf[3] = vcc_voltage >> 8;
+		mtbbus_output_buf[4] = vcc_voltage & 0xFF;
 		break;
 
 	default:
