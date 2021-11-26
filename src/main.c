@@ -43,8 +43,6 @@ void send_diag_value(uint8_t i);
 ///////////////////////////////////////////////////////////////////////////////
 // Defines & global variables
 
-#define BEACON_LED_RED // code for MTB-UNI v4.0 should define this variable
-
 #define LED_GR_ON 5
 #define LED_GR_OFF 2
 volatile uint8_t led_gr_counter = 0;
@@ -223,9 +221,6 @@ static inline void leds_update() {
 	_delay_us(2);
 
 	bool led_red_flashing = error_flags.all;
-	#ifdef BEACON_LED_RED
-	led_red_flashing |= beacon;
-	#endif
 
 	if (led_red_counter > 0) {
 		led_red_counter--;
