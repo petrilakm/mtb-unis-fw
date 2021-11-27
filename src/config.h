@@ -27,7 +27,7 @@ uint16_t config_bootloader_version();
 
 uint8_t input_delay(uint8_t input);
 
-#define CONFIG_MODULE_TYPE 0x15
+#define CONFIG_MODULE_TYPE 0x16
 #define CONFIG_FW_MAJOR 1
 #define CONFIG_FW_MINOR 4
 #define CONFIG_PROTO_MAJOR 4
