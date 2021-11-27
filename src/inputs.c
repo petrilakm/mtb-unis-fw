@@ -19,8 +19,6 @@ static void _inputs_button_debounce_update();
 
 void inputs_debounce_update() {
 	uint16_t state = io_get_inputs_raw();
-	if (state != 0xFFFF)
-		io_led_red_toggle();
 
 	for (size_t i = 0; i < NO_INPUTS; i++) {
 		if (state & 0x01) { // state == 1 → logical 0

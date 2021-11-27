@@ -218,7 +218,6 @@ static inline void leds_update() {
 		if (led_gr_counter == LED_GR_OFF)
 			io_led_green_off();
 	}
-	_delay_us(2);
 
 	bool led_red_flashing = error_flags.all;
 
