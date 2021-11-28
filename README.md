@@ -1,7 +1,11 @@
 # MTB-UNI v4 Firmware
 
 This repository contains firmware for ATmega128 MCU for
-[MTB-UNI v4 module](https://mtb.kmz-brno.cz/uni).
+[MTB-UNI v4 module](https://mtb.kmz-brno.cz/uni). Firmware consists of main
+firmware & bootloader. Bootloader is placed in `bootloader` directory, it is
+a separate compilable project. To compile main fw & bootloader to single hex
+file, compile bootloader first and then main firmware. See build instructions
+below.
 
 ## Build & requirements
 
