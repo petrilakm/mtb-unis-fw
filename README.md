@@ -12,19 +12,21 @@ Hex files are available in *Releases* section.
 
 ## Programming
 
-Firmware could be programmed via programming connector on MTB-UNI module (ISP).
-Warning: MTB-UNI contains bug: MISO & MOSI pins are not on programming connector,
-they are placed on RS485 driver's pins. For programming v4.0 modules, please
-remove RS485 driver and connect pins MISO & MOSI to appropriate pins. SCK,
-RESET, VCC & GND could be connected via programming connector.
+Firmware could be programmed
 
-MTB-UNI v4.2 fixes this bug. For programming, please remove RS485 driver as it
-uses same pins as are used for serial programming.
+1. via programming connector on MTB-UNI module (ISP),
+2. over MTBbus (if bootloader is already present).
 
-In future, firmware could also be upgraded directly via MTBbus.
+> Warning: MTB-UNI v4.0 contains bug: MISO & MOSI pins are not on programming connector,
+> they are placed on RS485 driver's pins. For programming v4.0 modules, please
+> remove RS485 driver and connect pins MISO & MOSI to appropriate pins. SCK,
+> RESET, VCC & GND could be connected via programming connector.
 
-This FW uses EEPROM, however no programming of EEPROM is required. There should
-be just an empty EEPROM on fresh devices.
+For ISP, please remove RS485 driver as it uses same pins as are used for serial
+programming.
+
+This FW uses EEPROM, however programming of EEPROM is not required. There should
+be just empty EEPROM on fresh devices.
 
 Flash main application, fuses & bootloader:
 
