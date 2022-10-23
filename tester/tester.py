@@ -28,8 +28,11 @@ from typing import Any, Dict
 import json
 import sys
 from time import sleep
+import random
 
 PROPAGATE_DELAY: int = 0.05  # 50 ms
+RANDOM_SEED = 424242
+RANDOM_TESTS_REPEATS = 200
 
 
 class EDaemonResponse(Exception):
@@ -116,15 +119,30 @@ def test_inputs_single_bit(socket, verbose: bool, addr_tested: int, addr_inputs:
         assert_in_eq(inputs, 1 << i)
 
 
+def test_inputs_random(socket, verbose: bool, addr_tested: int, addr_inputs: int,
+                       addr_outputs: int) -> None:
+    for _ in range(RANDOM_TESTS_REPEATS):
+        outputs = random.randint(0, 0x10000)
+        uni_set_outputs(socket, verbose, addr_inputs, outputs)
+        sleep(PROPAGATE_DELAY)
+        inputs = get_inputs(socket, verbose, addr_tested)
+        assert_in_eq(inputs, outputs)
+        print(f'[ OK ] {io_to_str(reverse_bits(outputs, 16))} == {io_to_str(inputs)}')
+
+
 def test_inputs(socket, verbose: bool, addr_tested: int, addr_inputs: int,
                 addr_outputs: int) -> None:
-    print('[....] Testing inputs...')
+    print('[....] Testing inputs single bit...')
     test_inputs_single_bit(socket, verbose, addr_tested, addr_inputs, addr_outputs)
-    print('[ OK ] Input tests passed')
+    print('[ OK ] Input signle bit tests passed')
+    print('[....] Testing inputs random...')
+    test_inputs_random(socket, verbose, addr_tested, addr_inputs, addr_outputs)
+    print('[ OK ] Input random tests passed')
 
 
 def main() -> None:
     args = docopt(__doc__)
+    random.seed(RANDOM_SEED)
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect((args['-s'], int(args['-p'])))
