@@ -32,7 +32,7 @@ import random
 
 PROPAGATE_DELAY: int = 0.05  # 50 ms
 RANDOM_SEED = 424242
-RANDOM_TESTS_REPEATS = 200
+RANDOM_TESTS_REPEATS = 100
 
 
 class EDaemonResponse(Exception):
@@ -110,34 +110,63 @@ def assert_in_eq(nin: int, nout: int) -> None:
         f'Inputs set to {io_to_str(reverse_bits(nout, 16))}, but are {io_to_str(nin)}'
 
 
-def test_inputs_single_bit(socket, verbose: bool, addr_tested: int, addr_inputs: int,
-                           addr_outputs: int) -> None:
+def assert_out_eq(nout: int, nin: int) -> None:
+    assert nout == reverse_bits(nin, 16), \
+        f'Outputs set to {io_to_str(nout)}, but are detected as {io_to_str(reverse_bits(nin, 16))}'
+
+
+def test_inputs_single_bit(socket, verbose: bool, addr_tested: int, addr_outputs: int) -> None:
     for i in range(16):
-        uni_set_outputs(socket, verbose, addr_inputs, 1 << i)
+        uni_set_outputs(socket, verbose, addr_outputs, 1 << i)
         sleep(PROPAGATE_DELAY)
         inputs = get_inputs(socket, verbose, addr_tested)
         assert_in_eq(inputs, 1 << i)
 
 
-def test_inputs_random(socket, verbose: bool, addr_tested: int, addr_inputs: int,
-                       addr_outputs: int) -> None:
+def test_inputs_random(socket, verbose: bool, addr_tested: int, addr_outputs: int) -> None:
     for _ in range(RANDOM_TESTS_REPEATS):
         outputs = random.randint(0, 0x10000)
-        uni_set_outputs(socket, verbose, addr_inputs, outputs)
+        uni_set_outputs(socket, verbose, addr_outputs, outputs)
         sleep(PROPAGATE_DELAY)
         inputs = get_inputs(socket, verbose, addr_tested)
         assert_in_eq(inputs, outputs)
         print(f'[ OK ] {io_to_str(reverse_bits(outputs, 16))} == {io_to_str(inputs)}')
 
 
-def test_inputs(socket, verbose: bool, addr_tested: int, addr_inputs: int,
-                addr_outputs: int) -> None:
+def test_outputs_single_bit(socket, verbose: bool, addr_tested: int, addr_inputs: int) -> None:
+    for i in range(16):
+        uni_set_outputs(socket, verbose, addr_tested, 1 << i)
+        sleep(PROPAGATE_DELAY)
+        outputs = get_inputs(socket, verbose, addr_inputs)
+        assert_out_eq(1 << i, outputs)
+
+
+def test_outputs_random(socket, verbose: bool, addr_tested: int, addr_inputs: int) -> None:
+    for _ in range(RANDOM_TESTS_REPEATS):
+        outputs = random.randint(0, 0x10000)
+        uni_set_outputs(socket, verbose, addr_tested, outputs)
+        sleep(PROPAGATE_DELAY)
+        inputs = get_inputs(socket, verbose, addr_inputs)
+        assert_out_eq(outputs, inputs)
+        print(f'[ OK ] {io_to_str(reverse_bits(outputs, 16))} == {io_to_str(inputs)}')
+
+
+def test_inputs(socket, verbose: bool, addr_tested: int, addr_outputs: int) -> None:
     print('[....] Testing inputs single bit...')
-    test_inputs_single_bit(socket, verbose, addr_tested, addr_inputs, addr_outputs)
-    print('[ OK ] Input signle bit tests passed')
+    test_inputs_single_bit(socket, verbose, addr_tested, addr_outputs)
+    print('[ OK ] Input single bit tests passed')
     print('[....] Testing inputs random...')
-    test_inputs_random(socket, verbose, addr_tested, addr_inputs, addr_outputs)
+    test_inputs_random(socket, verbose, addr_tested, addr_outputs)
     print('[ OK ] Input random tests passed')
+
+
+def test_outputs(socket, verbose: bool, addr_tested: int, addr_inputs: int) -> None:
+    print('[....] Testing outputs single bit...')
+    test_outputs_single_bit(socket, verbose, addr_tested, addr_inputs)
+    print('[ OK ] Output single bit tests passed')
+    print('[....] Testing outputs random...')
+    test_outputs_random(socket, verbose, addr_tested, addr_inputs)
+    print('[ OK ] Output random tests passed')
 
 
 def main() -> None:
@@ -148,8 +177,8 @@ def main() -> None:
     sock.connect((args['-s'], int(args['-p'])))
 
     try:
-        test_inputs(sock, args['-v'], int(args['<tested_addr>']), int(args['<inputs_addr>']),
-                    int(args['<outputs_addr>']))
+        test_inputs(sock, args['-v'], int(args['<tested_addr>']), int(args['<inputs_addr>']))
+        test_outputs(sock, args['-v'], int(args['<tested_addr>']), int(args['<outputs_addr>']))
         print('[INFO] All tests done')
     except AssertionError:
         print(traceback.format_exc(), end='')
