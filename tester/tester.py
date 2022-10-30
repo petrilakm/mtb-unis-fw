@@ -19,6 +19,8 @@ Options:
   -v                 Verbose
   -h --help          Show this screen.
   -w --wait          Wait when tests fails
+  -i --inputs        Test just inputs
+  -o --outputs       Test just outputs
 """
 
 import socket
@@ -177,8 +179,10 @@ def main() -> None:
     sock.connect((args['-s'], int(args['-p'])))
 
     try:
-        test_inputs(sock, args['-v'], int(args['<tested_addr>']), int(args['<inputs_addr>']))
-        test_outputs(sock, args['-v'], int(args['<tested_addr>']), int(args['<outputs_addr>']))
+        if args['--inputs'] or not args['--outputs']:
+            test_inputs(sock, args['-v'], int(args['<tested_addr>']), int(args['<inputs_addr>']))
+        if args['--outputs'] or not args['--inputs']:
+            test_outputs(sock, args['-v'], int(args['<tested_addr>']), int(args['<outputs_addr>']))
         print('[INFO] All tests done')
     except AssertionError:
         print(traceback.format_exc(), end='')
