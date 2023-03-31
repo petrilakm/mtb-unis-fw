@@ -1,0 +1,58 @@
+IN:
+PE6
+PE7
+PF2-PF7
+PA
+
+OUT:
+PD+PC
+
+SERVO:
+PB7
+PB6
+PB5
+PE5
+PE4
+PE3
+
+
+servo power control
+PB4
+servo power connected (input)
+PG1
+servo power analog voltage:
+PF0 (ADC0)
+
+LEDs:
+PG0
+PG3
+
+Jumper:
+PG2
+
+
+comm:
+PE2 - TE
+PE0 - RxD
+PE1 - TxD
+
+
+EEPROM map:
+00	version
+01	MTBBUS speed
+02	int WDRF
+03	MTB boot
+04	MTB addr
+08	bootloader ver major
+09	bootloader ver minor
+10	safe state
+11	...
+..
+1f	...
+20	input delays
+21	...
+..
+27	...
+
+
+CmdMtbModuleChangeAddr

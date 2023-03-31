@@ -127,7 +127,6 @@ static inline void init() {
 
 	io_init();
 	io_led_red_on();
-	io_led_green_on();
 	io_led_blue_on();
 	scom_init();
 
@@ -144,9 +143,9 @@ static inline void init() {
 	config_load();
 	outputs_set_full(config_safe_state);
 
-	uint8_t _mtbbus_addr = io_get_addr_raw();
-	error_flags.bits.addr_zero = (_mtbbus_addr == 0);
-	mtbbus_init(_mtbbus_addr, config_mtbbus_speed);
+	//uint8_t _mtbbus_addr = io_get_addr_raw();
+	error_flags.bits.addr_zero = (config_mtbbus_addr == 0);
+	mtbbus_init(config_mtbbus_addr, config_mtbbus_speed);
 	mtbbus_on_receive = mtbbus_received;
 
 	update_mtbbus_polarity();
@@ -155,6 +154,15 @@ static inline void init() {
 	mtbbus_warn_flags_old.all = 0xFF; // causes report of change to PC
 	wdt_enable(WDTO_250MS);
 	sei(); // enable interrupts globally
+}
+
+static inline void soft_reset() {
+	__asm__ volatile ("ijmp" ::"z" (0));
+}
+
+static inline void hard_reset() {
+	wdt_enable(WDTO_15MS);
+	while (true);
 }
 
 static inline void on_initialized() {
@@ -267,9 +275,9 @@ static inline void btn_short_press() {
 		return;
 	}
 
-	uint8_t _mtbbus_addr = io_get_addr_raw();
-	error_flags.bits.addr_zero = (_mtbbus_addr == 0);
-	mtbbus_addr = _mtbbus_addr;
+	//uint8_t _mtbbus_addr = io_get_addr_raw();
+	//error_flags.bits.addr_zero = (_mtbbus_addr == 0);
+	//mtbbus_addr = _mtbbus_addr;
 	if (mtbbus_addr != 0)
 		led_red_ok();
 	update_mtbbus_polarity();
@@ -376,7 +384,22 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 			mtbbus_send_ack();
 
 	} else if ((command_code == MTBBUS_CMD_MOSI_CHANGE_ADDR) && (data_len >= 1) && (!broadcast)) {
-		mtbbus_send_error(MTBBUS_ERROR_UNSUPPORTED_COMMAND);
+		//mtbbus_send_error(MTBBUS_ERROR_UNSUPPORTED_COMMAND);
+		if (data[0] > 0) {
+			set_address(data[0]);
+			mtbbus_send_ack();
+		} else {
+			mtbbus_send_error(MTBBUS_ERROR_BAD_ADDRESS);
+		}
+
+	} else if ((command_code == MTBBUS_CMD_MOSI_CHANGE_ADDR) && (data_len >= 1) && (broadcast)) {
+		//mtbbus_send_error(MTBBUS_ERROR_UNSUPPORTED_COMMAND);
+		if (io_button()) {
+			if (data[0] > 0) {
+				set_address(data[0]);
+                                                        hard_reset();   
+			}
+		}
 
 	} else if ((command_code == MTBBUS_CMD_MOSI_CHANGE_SPEED) && (data_len >= 1)) {
 		config_mtbbus_speed = data[0];

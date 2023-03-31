@@ -22,11 +22,11 @@ bool _flicker_enabled[NO_OUTPUTS] = {false, };
 
 // State according to ‹protocol›
 // ‹https://github.com/kmzbrnoI/mtbbus-protocol/blob/master/modules/uni.md›
-uint8_t _outputs_state[NO_OUTPUTS] = {0, };
+uint8_t _outputs_state[NO_OUTPUTS_ALL] = {0, };
 
 void outputs_apply_state() {
-	uint16_t plain_mask = 0;
-	uint16_t plain_state = 0;
+	uint32_t plain_mask = 0;
+	uint32_t plain_state = 0;
 
 	for (int i = NO_OUTPUTS-1; i >= 0; i--) {
 		plain_mask <<= 1;
@@ -47,6 +47,12 @@ void outputs_apply_state() {
 				plain_state |= 1;
 		}
 	}
+	for (int i = NO_OUTPUTS_ALL-1; i >= NO_OUTPUTS; i--) {
+		plain_mask |= 0x0FFF0000;
+		if (_outputs_state[i] & 1)
+			plain_state |= (1 << i);
+		}
+	}
 
 	io_set_outputs_raw_mask(plain_state, plain_mask);
 }
@@ -59,9 +65,9 @@ void outputs_set_zipped(uint8_t data[], size_t length) {
 	uint16_t bin_state = data[3] | (data[2] << 8);
 	size_t bytei = 4;
 
-	for (size_t i = 0; i < NO_OUTPUTS; i++) {
-		if ((full_mask & 1) == 0) {
-			_outputs_state[i] = bin_state & 1;
+	for (size_t i = 0; i < NO_OUTPUTS_ALL; i++) {
+		if (((full_mask >> i) & 1) == 0) {
+			_outputs_state[i] = (bin_state >> i) & 1;
 		} else {
 			if (bytei < length) {
 				_outputs_state[i] = data[bytei];
@@ -69,8 +75,8 @@ void outputs_set_zipped(uint8_t data[], size_t length) {
 			}
 		}
 
-		full_mask >>= 1;
-		bin_state >>= 1;
+		//full_mask >>= 1;
+		//bin_state >>= 1;
 	}
 
 	outputs_apply_state();

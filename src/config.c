@@ -6,11 +6,13 @@ uint8_t config_safe_state[NO_OUTPUTS];
 uint8_t config_inputs_delay[NO_OUTPUTS/2];
 bool config_write = false;
 uint8_t config_mtbbus_speed;
+uint8_t config_mtbbus_addr;
 
 #define EEPROM_ADDR_VERSION                ((uint8_t*)0x00)
 #define EEPROM_ADDR_MTBBUS_SPEED           ((uint8_t*)0x01)
 #define EEPROM_ADDR_INT_WDRF               ((uint8_t*)0x02)
 #define EEPROM_ADDR_BOOT                   ((uint8_t*)0x03)
+#define EEPROM_ADDR_MTBBUS_ADDR            ((uint8_t*)0x04)
 #define EEPROM_ADDR_BOOTLOADER_VER_MAJOR   ((uint8_t*)0x08)
 #define EEPROM_ADDR_BOOTLOADER_VER_MINOR   ((uint8_t*)0x09)
 #define EEPROM_ADDR_SAFE_STATE             ((void*)0x10)
@@ -22,6 +24,7 @@ void config_load() {
 	if (version == 0xFF) {
 		// default EEPROM content → reset config
 		config_mtbbus_speed = MTBBUS_SPEED_38400;
+                            config_mtbbus_addr = 1;
 		for (size_t i = 0; i < NO_OUTPUTS; i++)
 			config_safe_state[i] = 0;
 		for (size_t i = 0; i < NO_OUTPUTS/2; i++)
@@ -33,6 +36,8 @@ void config_load() {
 	config_mtbbus_speed = eeprom_read_byte(EEPROM_ADDR_MTBBUS_SPEED);
 	if (config_mtbbus_speed > MTBBUS_SPEED_115200)
 		config_mtbbus_speed = MTBBUS_SPEED_38400;
+              
+              config_mtbbus_addr = eeprom_read_byte(EEPROM_ADDR_MTBBUS_ADDR);
 
 	uint8_t boot = eeprom_read_byte(EEPROM_ADDR_BOOT);
 	if (boot != CONFIG_BOOT_NORMAL)
@@ -45,8 +50,13 @@ void config_load() {
 void config_save() {
 	eeprom_update_byte(EEPROM_ADDR_VERSION, 1);
 	eeprom_update_byte(EEPROM_ADDR_MTBBUS_SPEED, config_mtbbus_speed);
+              eeprom_update_byte(EEPROM_ADDR_MTBBUS_ADDR, config_mtbbus_addr);
 	eeprom_update_block(config_safe_state, EEPROM_ADDR_SAFE_STATE, NO_OUTPUTS);
 	eeprom_update_block(config_inputs_delay, EEPROM_ADDR_INPUTS_DELAY, NO_OUTPUTS/2);
+}
+
+void set_address(uint8_t address) {
+	eeprom_update_byte(EEPROM_ADDR_MTBBUS_ADDR, address);
 }
 
 uint8_t input_delay(uint8_t input) {
