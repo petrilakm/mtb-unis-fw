@@ -33,6 +33,7 @@ extern void (*volatile mtbbus_on_sent)();
 
 void mtbbus_init(uint8_t addr, uint8_t speed);
 void mtbbus_set_speed(uint8_t speed);
+void mtbbus_set_addr(uint8_t addr);
 
 bool mtbbus_can_fill_output_buf();
 int mtbbus_send(uint8_t *data, uint8_t size);

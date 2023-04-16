@@ -36,9 +36,9 @@ static void mtbbus_send_error(uint8_t code);
 #define CONFIG_BOOT_NORMAL 0x00
 #define CONFIG_BOOT_FWUPGD 0x01
 
-#define CONFIG_MODULE_TYPE 0x15
+#define CONFIG_MODULE_TYPE 0x50
 #define CONFIG_FW_MAJOR 1
-#define CONFIG_FW_MINOR 2
+#define CONFIG_FW_MINOR 0
 #define CONFIG_PROTO_MAJOR 4
 #define CONFIG_PROTO_MINOR 0
 

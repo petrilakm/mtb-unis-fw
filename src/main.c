@@ -13,6 +13,7 @@
 #include "outputs.h"
 #include "config.h"
 #include "inputs.h"
+#include "servo.h"
 #include "diag.h"
 #include "../lib/mtbbus.h"
 #include "../lib/crc16modbus.h"
@@ -22,7 +23,7 @@
 
 int main();
 static inline void init();
-void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len);
+void mtbbus_received_isr(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len);
 void mtbbus_send_ack();
 void mtbbus_send_inputs(uint8_t message_code);
 void mtbbus_send_error(uint8_t code);
@@ -82,6 +83,14 @@ volatile uint8_t mtbbus_auto_speed_timer = 0;
 volatile uint8_t mtbbus_auto_speed_last;
 #define MTBBUS_AUTO_SPEED_TIMEOUT 20 // 200 ms
 
+/*
+bool rx_broadcast;
+uint8_t rx_command_code;
+uint8_t rx_data[MTBBUS_INPUT_BUF_MAX_SIZE];
+uint8_t rx_data_len;
+bool rx_received = false;
+*/
+
 ///////////////////////////////////////////////////////////////////////////////
 
 int main() {
@@ -92,13 +101,23 @@ int main() {
 			outputs_changed_when_setting_scom = false;
 			scom_update();
 			scom_to_update = false;
+			/*
 			if (outputs_changed_when_setting_scom)
 				outputs_apply_state();
+			*/
 		}
+
 		if (inputs_debounce_to_update) {
 			inputs_debounce_update();
 			inputs_debounce_to_update = false;
 		}
+/*
+		if (rx_received) {
+			rx_received = false;
+			mtbbus_received();
+		}
+*/
+		outputs_apply_state();
 
 		if (config_write) {
 			config_save();
@@ -130,7 +149,7 @@ static inline void init() {
 	io_led_blue_on();
 	scom_init();
 
-	// Setup timer 1 @ 10 kHz (period 100 us)
+	// Setup timer 1 @ 2 kHz (period 500 us)
 	TCCR1B = (1 << WGM12) | (1 << CS10); // CTC mode, no prescaler
 	TIMSK = (1 << OCIE1A); // enable compare match interrupt
 	OCR1A = 7365;
@@ -143,10 +162,12 @@ static inline void init() {
 	config_load();
 	outputs_set_full(config_safe_state);
 
+	//servo_init();
+
 	//uint8_t _mtbbus_addr = io_get_addr_raw();
 	error_flags.bits.addr_zero = (config_mtbbus_addr == 0);
 	mtbbus_init(config_mtbbus_addr, config_mtbbus_speed);
-	mtbbus_on_receive = mtbbus_received;
+	mtbbus_on_receive = mtbbus_received_isr;
 
 	update_mtbbus_polarity();
 	diag_init();
@@ -290,7 +311,7 @@ static inline void btn_long_press() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len) {
+void mtbbus_received_isr(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len) {
 	if (!initialized)
 		return;
 
@@ -302,8 +323,9 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 	_delay_us(2);
 
 	mtbbus_timeout = 0;
-	if (mtbbus_auto_speed_in_progress)
+	if (mtbbus_auto_speed_in_progress) {
 		mtbbus_auto_speed_received();
+	}
 
 	if ((!broadcast) && (command_code == MTBBUS_CMD_MOSI_MODULE_INQUIRY) && (data_len >= 1)) {
 		static bool last_input_changed = false;
@@ -342,21 +364,47 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 		mtbbus_output_buf[9] = bootloader_ver & 0xFF;
 		mtbbus_send_buf_autolen();
 
-	} else if ((command_code == MTBBUS_CMD_MOSI_SET_CONFIG) && (data_len >= 24) && (!broadcast)) {
-		for (size_t i = 0; i < NO_OUTPUTS; i++)
-			config_safe_state[i] = data[i];
+	} else if ((command_code == MTBBUS_CMD_MOSI_SET_CONFIG) && (data_len >= 67) && (!broadcast)) {
+		uint8_t pos = 0;
+		for (size_t i = 0; i < NO_OUTPUTS_ALL; i++)
+			config_safe_state[i] = data[pos+i];
+		pos = NO_OUTPUTS_ALL; // 16+12= 28
 		for (size_t i = 0; i < NO_OUTPUTS/2; i++)
-			config_inputs_delay[i] = data[NO_OUTPUTS+i];
+			config_inputs_delay[i] = data[pos+i];
+		pos += (NO_OUTPUTS/2); // 8 -> 36
+		config_servo_enabled = data[pos];
+		pos++; // 1 -> 37
+		for (size_t i = 0; i < NO_SERVOS*2; i++) {
+			config_servo_position[i]  = data[pos+i+1];
+			config_servo_position[i] |= data[pos+i] << 8;
+		}
+		pos += (NO_SERVOS*2*2); // 24 -> 61
+		for (size_t i = 0; i < NO_SERVOS; i++)
+			config_servo_speed[i] = data[pos+i];
 		config_write = true;
 		mtbbus_send_ack();
 
 	} else if ((command_code == MTBBUS_CMD_MOSI_GET_CONFIG) && (!broadcast)) {
-		mtbbus_output_buf[0] = 25;
+		uint8_t pos = 0;
+		mtbbus_output_buf[0] = 68;
 		mtbbus_output_buf[1] = MTBBUS_CMD_MISO_MODULE_CONFIG;
-		for (size_t i = 0; i < NO_OUTPUTS; i++)
-			mtbbus_output_buf[2+i] = config_safe_state[i];
+		pos = 2;
+		for (size_t i = 0; i < NO_OUTPUTS_ALL; i++)
+			mtbbus_output_buf[pos+i] = config_safe_state[i];
+		pos += NO_OUTPUTS_ALL;
 		for (size_t i = 0; i < NO_OUTPUTS/2; i++)
-			mtbbus_output_buf[2+NO_OUTPUTS+i] = config_inputs_delay[i];
+			mtbbus_output_buf[pos+i] = config_inputs_delay[i];
+		pos += NO_OUTPUTS/2;
+		mtbbus_output_buf[pos] = config_servo_enabled;
+		pos += 1;
+		for (size_t i = 0; i < NO_SERVOS*2; i++) {
+			mtbbus_output_buf[pos+i*2]   = (config_servo_position[i] >> 8) & (0xff);
+			mtbbus_output_buf[pos+i*2+1] = (config_servo_position[i]) & (0xff);
+		}
+		pos += NO_SERVOS*2*2;
+		for (size_t i = 0; i < NO_SERVOS; i++)
+			mtbbus_output_buf[pos+i] = config_servo_speed[i];
+		pos += NO_SERVOS;
 		mtbbus_send_buf_autolen();
 
 	} else if ((command_code == MTBBUS_CMD_MOSI_BEACON) && (data_len >= 1)) {
@@ -367,37 +415,37 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 	} else if ((command_code == MTBBUS_CMD_MOSI_GET_INPUT) && (!broadcast)) {
 		mtbbus_send_inputs(MTBBUS_CMD_MISO_INPUT_STATE);
 
-	} else if ((command_code == MTBBUS_CMD_MOSI_SET_OUTPUT) && (data_len >= 4) && (!broadcast)) {
-		outputs_set_zipped(data, data_len);
-		outputs_changed_when_setting_scom = true;
-
+	} else if ((command_code == MTBBUS_CMD_MOSI_SET_OUTPUT) && (data_len >= 6) && (!broadcast)) {
 		mtbbus_output_buf[0] = data_len+1;
 		mtbbus_output_buf[1] = MTBBUS_CMD_MISO_OUTPUT_SET;
 		for (size_t i = 0; i < data_len; i++)
 			mtbbus_output_buf[2+i] = data[i];
 		mtbbus_send_buf_autolen();
 
+		outputs_set_zipped(data, data_len);
+		outputs_changed_when_setting_scom = true;
+
 	} else if (command_code == MTBBUS_CMD_MOSI_RESET_OUTPUTS) {
 		outputs_set_full(config_safe_state);
-
 		if (!broadcast)
 			mtbbus_send_ack();
 
 	} else if ((command_code == MTBBUS_CMD_MOSI_CHANGE_ADDR) && (data_len >= 1) && (!broadcast)) {
-		//mtbbus_send_error(MTBBUS_ERROR_UNSUPPORTED_COMMAND);
 		if (data[0] > 0) {
-			set_address(data[0]);
+			config_mtbbus_addr = data[0];
+			config_write = true;
 			mtbbus_send_ack();
+			mtbbus_set_addr(config_mtbbus_addr);
 		} else {
 			mtbbus_send_error(MTBBUS_ERROR_BAD_ADDRESS);
 		}
 
 	} else if ((command_code == MTBBUS_CMD_MOSI_CHANGE_ADDR) && (data_len >= 1) && (broadcast)) {
-		//mtbbus_send_error(MTBBUS_ERROR_UNSUPPORTED_COMMAND);
 		if (io_button()) {
 			if (data[0] > 0) {
-				set_address(data[0]);
-                                                        hard_reset();   
+				config_mtbbus_addr = data[0];
+				config_write = true;
+				mtbbus_set_addr(config_mtbbus_addr);
 			}
 		}
 
@@ -460,8 +508,7 @@ void mtbbus_send_error(uint8_t code) {
 
 void goto_bootloader() {
 	config_int_wdrf(true);
-	wdt_enable(WDTO_15MS);
-	while (true);
+	hard_reset();
 }
 
 static inline void update_mtbbus_polarity() {

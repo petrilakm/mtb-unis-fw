@@ -60,6 +60,10 @@ void mtbbus_set_speed(uint8_t speed) {
 	UCSR0A &= ~_BV(U2X0);
 }
 
+void mtbbus_set_addr(uint8_t addr) {
+	mtbbus_addr = addr;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Sending
 
