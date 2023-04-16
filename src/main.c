@@ -83,14 +83,6 @@ volatile uint8_t mtbbus_auto_speed_timer = 0;
 volatile uint8_t mtbbus_auto_speed_last;
 #define MTBBUS_AUTO_SPEED_TIMEOUT 20 // 200 ms
 
-/*
-bool rx_broadcast;
-uint8_t rx_command_code;
-uint8_t rx_data[MTBBUS_INPUT_BUF_MAX_SIZE];
-uint8_t rx_data_len;
-bool rx_received = false;
-*/
-
 ///////////////////////////////////////////////////////////////////////////////
 
 int main() {
@@ -132,6 +124,8 @@ int main() {
 static inline void init() {
 	cli();
 	wdt_disable();
+	TIMSK &= 0xC3; // clean-up after bootloader 
+	ETIMSK = 0;  // ...
 
 	// Check reset flags
 	mcucsr.all = MCUCSR;
@@ -149,22 +143,41 @@ static inline void init() {
 	io_led_blue_on();
 	scom_init();
 
-	// Setup timer 1 @ 2 kHz (period 500 us)
-	TCCR1B = (1 << WGM12) | (1 << CS10); // CTC mode, no prescaler
-	TIMSK = (1 << OCIE1A); // enable compare match interrupt
-	OCR1A = 7365;
+	// Setup timer 0 @ 100 Hz (period 10 ms)
+	TCCR0  = (1 << WGM01); // CTC mode
+	OCR0 = 143; // 100.00000 Hz
+	TCCR0 |= 7; // 1024× prescaler, run
+	TIMSK |= (1 << OCIE0) | (1 << TOIE0); // enable compare match interrupt
 
-	// Setup timer 3 @ 100 Hz (period 10 ms)
-	TCCR3B = (1 << WGM12) | (1 << CS11) | (1 << CS10); // CTC mode, 64× prescaler
-	ETIMSK = (1 << OCIE3A); // enable compare match interrupt
-	OCR3A = 2302;
+	// Setup timer 2 @ 2 kHz
+	TCCR2 = (1 << WGM21);  // CTC mode
+	OCR2  = 114; // 2003.478261 Hz
+	TCCR2 |= 5;  // 64× prescaler, run
+	TIMSK |= (1 << OCIE2);  // enable compare match interrupt
+
+	// Setup timers for servo operation
+	TCCR1A = 0;
+	TCCR1B = (1 << WGM13); // phase & freq. corrent PWM, stop
+	TCNT1 = 0;
+	OCR1A = 1375;
+	OCR1B = 1375;
+	OCR1C = 1375;
+	ICR1 = 18432;
+	TCCR1B |= 2; // 8× prescaller, run
+
+	TCCR3A = 0;
+	TCCR3B = (1 << WGM33); // phase & freq. corrent PWM, stop
+	TCNT3 = 0;
+	OCR3A = 1375;
+	OCR3B = 1375;
+	OCR3C = 1375;
+	ICR3 = 18432;
+	TCCR3B |= 2; // 8× prescaller, run
 
 	config_load();
 	outputs_set_full(config_safe_state);
+	servo_init();
 
-	//servo_init();
-
-	//uint8_t _mtbbus_addr = io_get_addr_raw();
 	error_flags.bits.addr_zero = (config_mtbbus_addr == 0);
 	mtbbus_init(config_mtbbus_addr, config_mtbbus_speed);
 	mtbbus_on_receive = mtbbus_received_isr;
@@ -193,14 +206,14 @@ static inline void on_initialized() {
 	initialized = true;
 }
 
-ISR(TIMER1_COMPA_vect) {
-	// Timer 1 @ 2 kHz (period 500 us)
+ISR(TIMER2_COMP_vect) {
+	// Timer 2 @ 2 kHz (period 500 us)
 	inputs_debounce_to_update = true;
 }
 
-ISR(TIMER3_COMPA_vect) {
-	// Timer 3 @ 100 Hz (period 10 ms)
-	if ((TCNT1H > 0) & (TCNT1H < OCR1AH))
+ISR(TIMER0_COMP_vect) {
+	// Timer 0 @ 100 Hz (period 10 ms)
+	if (TCNT0 > 0)
 		mtbbus_warn_flags.bits.missed_timer = true;
 
 	scom_to_update = true;
@@ -237,6 +250,13 @@ ISR(TIMER3_COMPA_vect) {
 			diag_timer = 0;
 		}
 	}
+}
+
+ISR(TIMER1_COMPA_vect) {
+	// must be empty, because bootloader start timer and ISR !
+}
+ISR(TIMER3_COMPA_vect) {
+	// must be empty, because bootloader start timer and ISR !
 }
 
 ///////////////////////////////////////////////////////////////////////////////
