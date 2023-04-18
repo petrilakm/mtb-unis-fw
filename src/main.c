@@ -63,6 +63,7 @@ volatile uint8_t led_blue_counter = 0;
 volatile bool inputs_debounce_to_update = false;
 volatile bool scom_to_update = false;
 volatile bool outputs_changed_when_setting_scom = false;
+volatile bool timeout_100hz = false;
 
 __attribute__((used, section(".fwattr"))) struct {
 	uint8_t no_pages;
@@ -103,16 +104,19 @@ int main() {
 			inputs_debounce_update();
 			inputs_debounce_to_update = false;
 		}
-/*
-		if (rx_received) {
-			rx_received = false;
-			mtbbus_received();
+		if (timeout_100hz) {
+			timeout_100hz = false;
+			servo_update();
+			outputs_update();
+			inputs_fall_update();
+			leds_update();
 		}
-*/
+
 		outputs_apply_state();
 
 		if (config_write) {
 			config_save();
+			servo_set_enable();
 			config_write = false;
 		}
 
@@ -217,9 +221,7 @@ ISR(TIMER0_COMP_vect) {
 		mtbbus_warn_flags.bits.missed_timer = true;
 
 	scom_to_update = true;
-	outputs_update();
-	inputs_fall_update();
-	leds_update();
+	timeout_100hz = true;
 
 	if (_init_counter < INIT_TIME) {
 		_init_counter++;

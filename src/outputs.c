@@ -72,11 +72,7 @@ void outputs_set_zipped(uint8_t data[], size_t length) {
 		bin_state >>= 1;
 	}
 
-	// ToDo: save virtual outputs data[3]+data[2]
-	output_virt = data[2] | (data[3] << 8);
-	outputs_need_apply = true;
-	//outputs_apply_state();
-
+	output_virt = data[3] | (data[2] << 8);
 }
 
 void outputs_set_full(uint8_t data[NO_OUTPUTS]) {
