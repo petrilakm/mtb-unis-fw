@@ -65,8 +65,9 @@ uint8_t servo_get_config_speed(uint8_t num) {
 
 
 void servo_init(void) {
-  // timers inicialized in main
-  servo_set_enable();
+	// timers inicialized in main
+	servo_set_enable();
+	PORTB |= (1 << PB4); // servo power enable
 	uint8_t i;
 	// for each servo
 	for(i=0; i<6; i++) {

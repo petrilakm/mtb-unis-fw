@@ -11,7 +11,7 @@ uint16_t output_virt = 0;
 void io_init() {
 	DDRD = 0xFF; // outputs 0-7
 	DDRC = 0xFF; // outputs 8-15
-	DDRB = 0xF0; // servo outputs
+	DDRB = 0xF0; // servo outputs & servo power enable
 	DDRE = 0x38; // servo outputs
 	DDRG = (1 << PIN_LED_RED) | (1 << PIN_LED_BLUE);
 	PORTG = (1 << PIN_BUTTON); // button pull-up

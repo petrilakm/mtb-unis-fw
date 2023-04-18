@@ -55,7 +55,6 @@ void outputs_set_zipped(uint8_t data[], size_t length) {
 		return;
 
 	uint16_t full_mask = data[1] | (data[0] << 8);
-	//uint32_t bin_state = data[5] | (data[4] << 8) | (((uint32_t) data[3]) << 16) | (((uint32_t) data[2]) << 24);
 	uint16_t bin_state = data[5] | (data[4] << 8);
 	size_t bytei = 6;
 
@@ -79,7 +78,6 @@ void outputs_set_full(uint8_t data[NO_OUTPUTS]) {
 	for (size_t i = 0; i < NO_OUTPUTS; i++)
 		_outputs_state[i] = data[i];
 	outputs_need_apply = true;
-	//outputs_apply_state();
 }
 
 void outputs_update() {
@@ -98,4 +96,5 @@ void outputs_update() {
 			_flicker_counters[i] = 0;
 		}
 	}
+	outputs_need_apply = true;
 }
