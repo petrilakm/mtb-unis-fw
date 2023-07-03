@@ -1,12 +1,16 @@
 #include <stdbool.h>
 #include "servo.h"
-#include "io.h"
-#include "config.h"
 
-int32_t servo_pos[NO_SERVOS] = {0,};
-uint8_t servo_state[NO_SERVOS] = {0,};
+uint16_t servo_pos[NO_SERVOS] = {4000,}; // actual servo position
+// state + 4bit=no pulse state 000s 00pp
+// 0000 0010 - servo end in position 2
+// 0001 0001 - servo stopped in position 1
+volatile uint8_t servo_state[NO_SERVOS] = {0,}; // used in ISR !
+// timeout in stop state
+uint8_t servo_timeout[NO_SERVOS] = {0,};
 
 void servo_set_raw(uint8_t num, uint16_t pos) {
+	pos = pos >> 2;
 	switch (num) {
 		case 0:
 			OCR1C = pos;
@@ -34,15 +38,20 @@ uint8_t servo_get_input_state(uint8_t num) {
 		return 0;
 	}
 	uint8_t tmp;
-	//num = 5-num; 
 	// get only 2 bits from input vector
-	tmp = ((output_virt >> ((5-num)*2)) & 0x03);
+	tmp = ((output_virt >> (num*2)) & 0x03);
 	switch (tmp) {
 		case 1:
-			servo_state[num] = 1;
+			if ((servo_state[num] & 3) != 1) {
+				servo_state[num] = 1;
+				servo_timeout[num] = 0; // reset timeout
+			}
 			return 1;
 		case 2:
-			servo_state[num] = 0;
+			if ((servo_state[num] & 3) != 2) {
+				servo_state[num] = 2;
+				servo_timeout[num] = 0; // reset timeout
+			}
 			return 2;
 		default:
 			return 0;
@@ -51,10 +60,10 @@ uint8_t servo_get_input_state(uint8_t num) {
 
 uint16_t servo_get_config_position(uint8_t num, uint8_t state) {
 	if (state == 1) {
-		return config_servo_position[num*2+0];
+		return config_servo_position[num*2+0] << 2;
 	}
 	if (state == 2) {
-		return config_servo_position[num*2+1];
+		return config_servo_position[num*2+1] << 2;
 	}
 	return 1375;
 }
@@ -68,86 +77,145 @@ void servo_init(void) {
 	// timers inicialized in main
 	servo_set_enable();
 	PORTB |= (1 << PB4); // servo power enable
-	uint8_t i;
-	// for each servo
-	for(i=0; i<6; i++) {
-		servo_pos[i] = servo_get_config_position(i, 1) << 3;
-	}
+	PORTE |= (1 << PE3); // default output for servo is L
+	PORTE |= (1 << PE4);
+	PORTE |= (1 << PE5);
+	PORTB |= (1 << PE5);
+	PORTB |= (1 << PE6);
+	PORTB |= (1 << PE7);
 }
 
 void servo_update(void) {
+	static uint8_t postdiv2 = 2;
+	static uint8_t servo_cnt = 0;
 	uint8_t i;
 	uint8_t state;
 	uint8_t speed;
 	int32_t pos_end;
-	// for each servo
-	for(i=0; i<6; i++) {
-		servo_get_input_state(i);
-		//if (state > 0) {
-			state = servo_state[i];
-			pos_end = servo_get_config_position(i, state) << 3;
-			speed = servo_get_config_speed(i);
-			int32_t diff = (servo_pos[i] - pos_end);
-			int32_t absdiff = (diff > 0) ? diff : -diff;
-			if ((absdiff) < speed) {
-				// end position
-				servo_pos[i] = pos_end;
+
+	postdiv2--;
+	if (postdiv2 == 0) {
+		postdiv2 = 2;
+		// 50 Hz
+
+		servo_get_input_state(servo_cnt);
+
+		servo_cnt++;
+		if (servo_cnt>5) servo_cnt=0;
+
+		// for each servo
+		for(i=0; i<6; i++) {
+			if ((config_servo_enabled >> i) & 1) {
+
+				// measure timeout
+				if (servo_timeout[i] > 0) {
+					servo_timeout[i]--;
+					if (servo_timeout[i] == 0) {
+						servo_state[i] |= 16;
+					}
+				}
+
+				state = servo_state[i];
+				if ((state < 8) & (servo_timeout[i] == 0)) {
+					pos_end = servo_get_config_position(i, state & 0x03);
+					speed = servo_get_config_speed(i);
+					int32_t diff = ( servo_pos[i] - pos_end);
+					int32_t absdiff = (diff > 0) ? diff : -diff;
+					if ((absdiff) < speed) {
+						// end position
+						servo_pos[i] = pos_end;
+						servo_timeout[i] = SERVO_TIMEOUT_MAX;
+					} else {
+						if (diff > 0) {
+							servo_pos[i] -= speed;
+						}
+						if (diff < 0) {
+							servo_pos[i] += speed;
+						}
+					}
+					servo_set_raw(i, servo_pos[i]);
+				}
 			} else {
-				if (diff > 0) {
-					servo_pos[i] -= speed;
-				}
-				if (diff < 0) {
-					servo_pos[i] += speed;
-				}
+				servo_state[i] |= 16; // disable unused servo
 			}
-			servo_set_raw(i, (servo_pos[i]) >> 3);
-		//}
+		}
 	}
 }
 
 void servo_set_enable(void) {
 	uint8_t mask = config_servo_enabled;
+	uint8_t i;
+	for (i=0; i<NO_SERVOS; i++) {
+		// set each servo
+		// ToDo: do not set enable on start !
+		servo_set_enable_one(i, (mask >> i) & 1);
+	}
+}
 
-	if (mask & (1 << 0)) { // servo 1
-		TCCR1A |=  (1 << COM1C0);
-		TCCR1A |=  (1 << COM1C1);
-	} else {
-		TCCR1A &= ~(1 << COM1C0);
-		TCCR1A &= ~(1 << COM1C1);
-	}
-	if (mask & (1 << 1)) { // servo 2
-		TCCR1A |=  (1 << COM1B0);
-		TCCR1A |=  (1 << COM1B1);
-	} else {
-		TCCR1A &= ~(1 << COM1B0);
-		TCCR1A &= ~(1 << COM1B1);
-	}
-	if (mask & (1 << 2)) { // servo 3
-		TCCR1A |=  (1 << COM1A0);
-		TCCR1A |=  (1 << COM1A1);
-	} else {
-		TCCR1A &= ~(1 << COM1A0);
-		TCCR1A &= ~(1 << COM1A1);
-	}
-	if (mask & (1 << 3)) { // servo 4
-		TCCR3A |=  (1 << COM3C0);
-		TCCR3A |=  (1 << COM3C1);
-	} else {
-		TCCR3A &= ~(1 << COM3C0);
-		TCCR3A &= ~(1 << COM3C1);
-	}
-	if (mask & (1 << 4)) { // servo 5
-		TCCR3A |=  (1 << COM3B0);
-		TCCR3A |=  (1 << COM3B1);
-	} else {
-		TCCR3A &= ~(1 << COM3B0);
-		TCCR3A &= ~(1 << COM3B1);
-	}
-	if (mask & (1 << 5)) { // servo 6
-		TCCR3A |=  (1 << COM3A0);
-		TCCR3A |=  (1 << COM3A1);
-	} else {
-		TCCR3A &= ~(1 << COM3A0);
-		TCCR3A &= ~(1 << COM3A1);
+void servo_set_enable_one(uint8_t servo, bool state)
+{
+	switch (servo) {
+		case 0:
+			if (state) { // servo 1
+				TCCR1A |=  (1 << COM1C0);
+				TCCR1A |=  (1 << COM1C1);
+			} else {
+				TCCR1A &= ~(1 << COM1C0);
+				TCCR1A &= ~(1 << COM1C1);
+				PORTB |= (1 << PE7);
+			}
+			break;
+		case 1:
+			if (state) { // servo 2
+				TCCR1A |=  (1 << COM1B0);
+				TCCR1A |=  (1 << COM1B1);
+			} else {
+				TCCR1A &= ~(1 << COM1B0);
+				TCCR1A &= ~(1 << COM1B1);
+				PORTB |= (1 << PE6);
+			}
+			break;
+		case 2:
+			if (state) { // servo 3
+				TCCR1A |=  (1 << COM1A0);
+				TCCR1A |=  (1 << COM1A1);
+			} else {
+				TCCR1A &= ~(1 << COM1A0);
+				TCCR1A &= ~(1 << COM1A1);
+				PORTB |= (1 << PE5);
+			}
+			break;
+		case 3:
+			if (state) { // servo 4
+				TCCR3A |=  (1 << COM3C0);
+				TCCR3A |=  (1 << COM3C1);
+			} else {
+				TCCR3A &= ~(1 << COM3C0);
+				TCCR3A &= ~(1 << COM3C1);
+				PORTE |= (1 << PE5);
+			}
+			break;
+		case 4:
+			if (state) { // servo 5
+				TCCR3A |=  (1 << COM3B0);
+				TCCR3A |=  (1 << COM3B1);
+			} else {
+				TCCR3A &= ~(1 << COM3B0);
+				TCCR3A &= ~(1 << COM3B1);
+				PORTE |= (1 << PE4);
+			}
+			break;
+		case 5:
+			if (state) { // servo 6
+				TCCR3A |=  (1 << COM3A0);
+				TCCR3A |=  (1 << COM3A1);
+			} else {
+				TCCR3A &= ~(1 << COM3A0);
+				TCCR3A &= ~(1 << COM3A1);
+				PORTE |= (1 << PE3);
+			}
+			break;
+		default:
+			return;
 	}
 }

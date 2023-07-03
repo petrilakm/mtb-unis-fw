@@ -167,6 +167,7 @@ static inline void init() {
 	OCR1B = 1375;
 	OCR1C = 1375;
 	ICR1 = 18432;
+	TIMSK |= (1 << TICIE1); // overflow on top
 	TCCR1B |= 2; // 8× prescaller, run
 
 	TCCR3A = 0;
@@ -176,6 +177,7 @@ static inline void init() {
 	OCR3B = 1375;
 	OCR3C = 1375;
 	ICR3 = 18432;
+	ETIMSK |= (1 << TICIE3);
 	TCCR3B |= 2; // 8× prescaller, run
 
 	config_load();
@@ -261,6 +263,27 @@ ISR(TIMER3_COMPA_vect) {
 	// must be empty, because bootloader start timer and ISR !
 }
 
+// enable disable servo signals on demand (and in right time)
+ISR(TIMER1_CAPT_vect) {
+	uint8_t i;
+	for (i=0; i<3; i++) {
+		if (servo_state[i] & 0x10) {
+			servo_set_enable_one(i, false);
+		} else {
+			servo_set_enable_one(i, true);
+		}
+	}
+}
+ISR(TIMER3_CAPT_vect) {
+	uint8_t i;
+	for (i=3; i<6; i++) {
+		if (servo_state[i] & 0x10) {
+			servo_set_enable_one(i, false);
+		} else {
+			servo_set_enable_one(i, true);
+		}
+	}
+}
 ///////////////////////////////////////////////////////////////////////////////
 
 static inline void leds_update() {
@@ -397,8 +420,8 @@ void mtbbus_received_isr(bool broadcast, uint8_t command_code, uint8_t *data, ui
 		config_servo_enabled = data[pos];
 		pos++; // 1 -> 37
 		for (size_t i = 0; i < NO_SERVOS*2; i++) {
-			config_servo_position[i]  = data[pos+i+1];
-			config_servo_position[i] |= data[pos+i] << 8;
+			config_servo_position[i]  = data[pos+(i*2)+1];
+			config_servo_position[i] |= data[pos+(i*2)+0] << 8;
 		}
 		pos += (NO_SERVOS*2*2); // 24 -> 61
 		for (size_t i = 0; i < NO_SERVOS; i++)
