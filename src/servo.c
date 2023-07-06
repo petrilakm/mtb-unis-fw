@@ -8,6 +8,11 @@ uint16_t servo_pos[NO_SERVOS] = {4000,}; // actual servo position
 volatile uint8_t servo_state[NO_SERVOS] = {0,}; // used in ISR !
 // timeout in stop state
 uint8_t servo_timeout[NO_SERVOS] = {0,};
+// for manual servo positioning
+bool uint8_t servo_test_select = 255;
+uint16_t servo_test_pos = 0;
+uint16_t servo_test_pos_last = 0;
+uint16_t servo_test_timeout = 0;
 
 void servo_set_raw(uint8_t num, uint16_t pos) {
 	pos = pos >> 2;
@@ -105,19 +110,44 @@ void servo_update(void) {
 
 		// for each servo
 		for(i=0; i<6; i++) {
+			// only enabled servos
 			if ((config_servo_enabled >> i) & 1) {
+				if (i == servo_test_select) {
+					// servo in manual mode:
+					//set current position (controled in interupt via received commands)
 
-				// measure timeout
-				if (servo_timeout[i] > 0) {
-					servo_timeout[i]--;
-					if (servo_timeout[i] == 0) {
-						servo_state[i] |= 16;
+					// measure timeout of manual positioning
+					if (servo_test_timeout > 0) {
+						servo_test_timeout--;
+						if (servo_test_timeout == 0) {
+							// end of manual mode, return to normal mode
+							servo_test_select = 255; // deselect manual servo
+							servo_state[i] &= ~16;  // enable servo signal
+							servo_timeout[i] = 0; // reset timeout for servo operation
+						}
+					}
+
+					// if manual position changed
+					if (servo_test_pos != servo_test_pos_last) {
+						servo_test_pos_last = servo_test_pos; // save last command
+						servo_state[i] &= ~16;  // enable servo signal
+						servo_timeout[i] = 0; // reset timeout for servo operation
+						servo_test_timeout = SERVO_TEST_TIMEOUT_MAX;  // reset timeout for manual positioning end
+						pos_end = servo_test_pos; // set manual position
+					}
+				} else {
+					pos_end = servo_get_config_position(i, state & 0x03);
+					// measure timeout
+					if (servo_timeout[i] > 0) {
+						servo_timeout[i]--;
+						if (servo_timeout[i] == 0) {
+							servo_state[i] |= 16;
+						}
 					}
 				}
 
 				state = servo_state[i];
 				if ((state < 8) & (servo_timeout[i] == 0)) {
-					pos_end = servo_get_config_position(i, state & 0x03);
 					speed = servo_get_config_speed(i);
 					int32_t diff = ( servo_pos[i] - pos_end);
 					int32_t absdiff = (diff > 0) ? diff : -diff;

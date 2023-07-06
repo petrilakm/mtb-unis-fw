@@ -7,9 +7,15 @@
 /* manage servo operations
  */
 
-#define SERVO_TIMEOUT_MAX (150)
+// 1s of servo signal in sterady state
+#define SERVO_TIMEOUT_MAX (50*1)
+// 120s of manual positioning mode
+#define SERVO_TEST_TIMEOUT_MAX (50*120)
 
 extern volatile uint8_t servo_state[NO_SERVOS];
+extern uint16_t servo_pos[NO_SERVOS];
+extern uint8_t servo_test_select;
+extern uint16_t servo_test_pos;
 
 void servo_init(void);
 void servo_update(void); // call every 10 ms

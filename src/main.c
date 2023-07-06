@@ -475,6 +475,25 @@ void mtbbus_received_isr(bool broadcast, uint8_t command_code, uint8_t *data, ui
 		if (!broadcast)
 			mtbbus_send_ack();
 
+	// specific commands for UNIS
+	} else if ((command_code == MTBBUS_CMD_MOSI_SPECIFIC) && (!broadcast) {
+		// end of manual positioning
+		if ((date_len == 2) && (data[0] == 3) && (data[1] == 0)) {
+			servo_test_select = 255;
+			mtbbus_send_ack();
+		// set manual position - override normal control
+		} else if ((date_len == 4) && data[0] == 3) {
+			uint8_t servo_num = (data[1] >> 1) - 1;
+			if (servo_num < NO_SERVOS) {
+				// right servo selected
+				servo_test_select = servo_num;
+				servo_test_pos = (data[2] << 8) | data[3];
+			} else {
+				mtbbus_send_error(MTBBUS_ERROR_UNKNOWN_COMMAND);
+			}
+		} else
+			mtbbus_send_error(MTBBUS_ERROR_UNKNOWN_COMMAND);
+
 	} else if ((command_code == MTBBUS_CMD_MOSI_CHANGE_ADDR) && (data_len >= 1) && (!broadcast)) {
 		if (data[0] > 0) {
 			config_mtbbus_addr = data[0];
