@@ -31,6 +31,7 @@ static inline void leds_update();
 void goto_bootloader();
 static inline void update_mtbbus_polarity();
 void led_red_ok();
+void led_blue_ok();
 static inline void on_initialized();
 static inline bool mtbbus_addressed();
 static inline void btn_short_press();
@@ -58,6 +59,7 @@ volatile bool beacon = false;
 
 #define LED_BLUE_BEACON_ON 100
 #define LED_BLUE_BEACON_OFF 50
+#define LED_BLUE_OK 4
 volatile uint8_t led_blue_counter = 0;
 
 volatile bool inputs_debounce_to_update = false;
@@ -310,6 +312,8 @@ static inline void leds_update() {
 		led_blue_counter--;
 		if (led_blue_counter == LED_BLUE_BEACON_OFF)
 			io_led_blue_off();
+		if (led_blue_counter == 0)
+			io_led_blue_off();
 	}
 	if ((beacon) && (led_blue_counter == 0)) {
 		led_blue_counter = LED_BLUE_BEACON_ON;
@@ -321,6 +325,13 @@ void led_red_ok() {
 	if (led_red_counter == 0) {
 		led_red_counter = LED_RED_OK_ON;
 		io_led_red_on();
+	}
+}
+
+void led_blue_ok() {
+	if (led_blue_counter == 0) {
+		led_blue_counter = LED_BLUE_OK;
+		io_led_blue_on();
 	}
 }
 
@@ -364,6 +375,9 @@ void mtbbus_received_isr(bool broadcast, uint8_t command_code, uint8_t *data, ui
 	if (led_gr_counter == 0) {
 		io_led_green_on();
 		led_gr_counter = LED_GR_ON;
+	}
+	if ((!broadcast) && (command_code != MTBBUS_CMD_MOSI_MODULE_INQUIRY)) {
+		led_blue_ok();
 	}
 	_delay_us(2);
 
@@ -425,7 +439,11 @@ void mtbbus_received_isr(bool broadcast, uint8_t command_code, uint8_t *data, ui
 		}
 		pos += (NO_SERVOS*2*2); // 24 -> 61
 		for (size_t i = 0; i < NO_SERVOS; i++)
-			config_servo_speed[i] = data[pos+i];
+			if (data[pos+i] > 0) {
+				config_servo_speed[i] = data[pos+i];
+			} else {
+				config_servo_speed[i] = 30;
+			}
 		config_write = true;
 		mtbbus_send_ack();
 
@@ -476,18 +494,19 @@ void mtbbus_received_isr(bool broadcast, uint8_t command_code, uint8_t *data, ui
 			mtbbus_send_ack();
 
 	// specific commands for UNIS
-	} else if ((command_code == MTBBUS_CMD_MOSI_SPECIFIC) && (!broadcast) {
+	} else if ((command_code == MTBBUS_CMD_MOSI_SPECIFIC) && (!broadcast)) {
 		// end of manual positioning
-		if ((date_len == 2) && (data[0] == 3) && (data[1] == 0)) {
+		if ((data_len == 3) && (data[0] == 3) && (data[1] == 0)) {
 			servo_test_select = 255;
 			mtbbus_send_ack();
 		// set manual position - override normal control
-		} else if ((date_len == 4) && data[0] == 3) {
+		} else if ((data_len == 5) && data[0] == 3) {
 			uint8_t servo_num = (data[1] >> 1) - 1;
 			if (servo_num < NO_SERVOS) {
 				// right servo selected
 				servo_test_select = servo_num;
 				servo_test_pos = (data[2] << 8) | data[3];
+				mtbbus_send_ack();
 			} else {
 				mtbbus_send_error(MTBBUS_ERROR_UNKNOWN_COMMAND);
 			}

@@ -14,8 +14,8 @@
 
 extern volatile uint8_t servo_state[NO_SERVOS];
 extern uint16_t servo_pos[NO_SERVOS];
-extern uint8_t servo_test_select;
-extern uint16_t servo_test_pos;
+extern volatile uint8_t servo_test_select;
+extern volatile uint16_t servo_test_pos;
 
 void servo_init(void);
 void servo_update(void); // call every 10 ms
