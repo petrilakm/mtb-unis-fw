@@ -67,12 +67,12 @@ uint8_t servo_get_input_state(uint8_t num) {
 
 uint16_t servo_get_config_position(uint8_t num, uint8_t state) {
 	if (state == 1) {
-		return config_servo_position[num*2+0] << 2;
+		return (config_servo_position[num*2+0]+SERVO_OFFSET_POS) << 5;
 	}
 	if (state == 2) {
-		return config_servo_position[num*2+1] << 2;
+		return (config_servo_position[num*2+1]+SERVO_OFFSET_POS) << 5;
 	}
-	return 1375;
+	return (100<<5);
 }
 
 uint8_t servo_get_config_speed(uint8_t num) {
@@ -98,7 +98,7 @@ void servo_update(void) {
 	uint8_t i;
 	uint8_t state = 0;
 	uint8_t speed = 0;
-	int32_t pos_end = 800;
+	uint16_t pos_end = (100<<5);
 
 	postdiv2--;
 	if (postdiv2 == 0) {
@@ -110,59 +110,64 @@ void servo_update(void) {
 		servo_cnt++;
 		if (servo_cnt>5) servo_cnt=0;
 
+		// on deselect manual servo
+		// return manual positioned servo to right location
+		if (servo_test_select_last != servo_test_select) {
+			servo_state[servo_test_select_last] &= ~16;  // enable servo signal
+			servo_timeout[servo_test_select_last] = 0; // reset timeout for servo operation
+			servo_test_timeout = SERVO_TEST_TIMEOUT_MAX;  // reset timeout for manual positioning end
+			if (servo_test_select < NO_SERVOS) {
+				servo_state[servo_test_select] &= ~16;  // enable servo signal for new servo
+				servo_timeout[servo_test_select] = 0; // reset timeout for servo operation
+			}
+			servo_test_select_last = servo_test_select;
+		}
+		// measure timeout of manual positioning end
+		if (servo_test_timeout > 0) {
+			servo_test_timeout--;
+			if (servo_test_timeout == 0) {
+				// end of manual mode, return to normal mode
+				servo_state[servo_test_select] &= ~16;  // enable servo signal
+				servo_timeout[servo_test_select] = 0; // reset timeout for servo operation
+				servo_test_select = 255; // deselect manual servo
+			}
+		}
+
 		// for each servo
-		for(i=0; i<6; i++) {
+		for(i=0; i<NO_SERVOS; i++) {
 			// only enabled servos
 			if ((config_servo_enabled >> i) & 1) {
+				state = servo_state[i];
 				if (i == servo_test_select) {
 					// servo in manual mode:
 					//set current position (controled in interupt via received commands)
-					pos_end = servo_test_pos << 2; // set manual position
-
-					// measure timeout of manual positioning
-					if (servo_test_timeout > 0) {
-						servo_test_timeout--;
-						if (servo_test_timeout == 0) {
-							// end of manual mode, return to normal mode
-							servo_test_select = 255; // deselect manual servo
-							servo_state[i] &= ~16;  // enable servo signal
-							servo_timeout[i] = 0; // reset timeout for servo operation
-						}
-					}
+					pos_end = (servo_test_pos+SERVO_OFFSET_POS) << 5; // set manual position
 
 					// if manual position changed
 					if (servo_test_pos != servo_test_pos_last) {
 						servo_test_pos_last = servo_test_pos; // save last command
-						servo_state[i] &= ~16;  // enable servo signal
+						servo_state[i] &= ~0x10;  // enable servo signal
 						servo_timeout[i] = 0; // reset timeout for servo operation
 						servo_test_timeout = SERVO_TEST_TIMEOUT_MAX;  // reset timeout for manual positioning end
 					}
 				} else {
 					// normal operation
-					state = servo_state[i];
 					pos_end = servo_get_config_position(i, state & 0x03);
 				}
-
-				// on deselect manual servo
-				// return manual positioned servo to right location
-				if (servo_test_select_last != servo_test_select) {
-					servo_state[i] &= ~16;  // enable servo signal
-					servo_timeout[i] = 0; // reset timeout for servo operation
-				}
-				servo_test_select_last = servo_test_select;
+				//state = servo_state[i];
 
 				// measure timeout for one servo signal
 				if (servo_timeout[i] > 0) {
 					servo_timeout[i]--;
 					if (servo_timeout[i] == 0) {
-						servo_state[i] |= 16;
+						servo_state[i] |= 0x10;
 					}
 				}
 
-				if ((state < 8) & (servo_timeout[i] == 0)) {
+				if ((state < 8) && (servo_timeout[i] == 0)) {
 					speed = servo_get_config_speed(i);
-					int32_t diff = ( servo_pos[i] - pos_end);
-					int32_t absdiff = (diff > 0) ? diff : -diff;
+					int16_t diff = ( servo_pos[i] - pos_end);
+					int16_t absdiff = (diff > 0) ? diff : -diff;
 					if ((absdiff) < speed) {
 						// end position
 						servo_pos[i] = pos_end;

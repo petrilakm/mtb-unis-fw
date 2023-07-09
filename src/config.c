@@ -8,7 +8,7 @@ bool config_write = false;
 uint8_t config_mtbbus_speed;
 uint8_t config_mtbbus_addr;
 uint8_t config_servo_enabled;	// 1 byte
-uint16_t config_servo_position[NO_SERVOS*2];	// 24 bytes
+uint8_t config_servo_position[NO_SERVOS*2];	// 12 bytes
 uint8_t config_servo_speed[NO_SERVOS];	// 6 bytes
 
 
@@ -23,7 +23,7 @@ uint8_t config_servo_speed[NO_SERVOS];	// 6 bytes
 #define EEPROM_ADDR_INPUTS_DELAY           ((uint8_t*)0x30)
 #define EEPROM_ADDR_SERVO_ENABLED          ((uint8_t*)0x38)
 #define EEPROM_ADDR_SERVO_POSITION         ((uint16_t*)0x39)
-#define EEPROM_ADDR_SERVO_SPEED            ((uint8_t*)0x51)
+#define EEPROM_ADDR_SERVO_SPEED            ((uint8_t*)0x45)
 #define EEPROM_ADDR_EMPTY                  ((void*)0x57)
 
 
@@ -53,8 +53,10 @@ void config_load() {
 
 	eeprom_read_block(config_safe_state,     EEPROM_ADDR_SAFE_STATE,     NO_OUTPUTS_ALL);
 	eeprom_read_block(config_inputs_delay,   EEPROM_ADDR_INPUTS_DELAY,   NO_INPUTS/2);
-	eeprom_read_block(config_servo_position, EEPROM_ADDR_SERVO_POSITION, NO_SERVOS*2*2);
+	eeprom_read_block(config_servo_position, EEPROM_ADDR_SERVO_POSITION, NO_SERVOS*2);
 	eeprom_read_block(config_servo_speed,    EEPROM_ADDR_SERVO_SPEED,    NO_SERVOS);
+	for (size_t i = 0; i < NO_SERVOS; i++)
+		if (config_servo_speed[i] == 0) config_servo_speed[i] = 10;
 	config_servo_enabled = eeprom_read_byte(EEPROM_ADDR_SERVO_ENABLED);
 	
 }
@@ -66,7 +68,7 @@ void config_save() {
 	eeprom_update_byte(EEPROM_ADDR_SERVO_ENABLED, config_servo_enabled);
 	eeprom_update_block(config_safe_state,     EEPROM_ADDR_SAFE_STATE,     NO_OUTPUTS_ALL);
 	eeprom_update_block(config_inputs_delay,   EEPROM_ADDR_INPUTS_DELAY,   NO_INPUTS/2);
-	eeprom_update_block(config_servo_position, EEPROM_ADDR_SERVO_POSITION, NO_SERVOS*2*2);
+	eeprom_update_block(config_servo_position, EEPROM_ADDR_SERVO_POSITION, NO_SERVOS*2);
 	eeprom_update_block(config_servo_speed,    EEPROM_ADDR_SERVO_SPEED,    NO_SERVOS);
 }
 

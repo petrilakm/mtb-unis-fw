@@ -12,6 +12,8 @@
 // 120s of manual positioning mode
 #define SERVO_TEST_TIMEOUT_MAX (50*120)
 
+#define SERVO_OFFSET_POS (46)
+
 extern volatile uint8_t servo_state[NO_SERVOS];
 extern uint16_t servo_pos[NO_SERVOS];
 extern volatile uint8_t servo_test_select;

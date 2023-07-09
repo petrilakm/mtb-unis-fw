@@ -14,7 +14,7 @@ extern bool config_write;
 extern uint8_t config_mtbbus_speed;
 extern uint8_t config_mtbbus_addr;
 extern uint8_t config_servo_enabled;
-extern uint16_t config_servo_position[NO_SERVOS*2];
+extern uint8_t config_servo_position[NO_SERVOS*2];
 extern uint8_t config_servo_speed[NO_SERVOS];
 
 // Warning: these functions take long time to execute

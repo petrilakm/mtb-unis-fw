@@ -423,7 +423,7 @@ void mtbbus_received_isr(bool broadcast, uint8_t command_code, uint8_t *data, ui
 		mtbbus_output_buf[9] = bootloader_ver & 0xFF;
 		mtbbus_send_buf_autolen();
 
-	} else if ((command_code == MTBBUS_CMD_MOSI_SET_CONFIG) && (data_len >= 67) && (!broadcast)) {
+	} else if ((command_code == MTBBUS_CMD_MOSI_SET_CONFIG) && (data_len >= 56) && (!broadcast)) {
 		uint8_t pos = 0;
 		for (size_t i = 0; i < NO_OUTPUTS_ALL; i++)
 			config_safe_state[i] = data[pos+i];
@@ -434,22 +434,22 @@ void mtbbus_received_isr(bool broadcast, uint8_t command_code, uint8_t *data, ui
 		config_servo_enabled = data[pos];
 		pos++; // 1 -> 37
 		for (size_t i = 0; i < NO_SERVOS*2; i++) {
-			config_servo_position[i]  = data[pos+(i*2)+1];
-			config_servo_position[i] |= data[pos+(i*2)+0] << 8;
+			config_servo_position[i]  = data[pos+i];
 		}
-		pos += (NO_SERVOS*2*2); // 24 -> 61
+		pos += (NO_SERVOS*2); // 12 -> 49
 		for (size_t i = 0; i < NO_SERVOS; i++)
 			if (data[pos+i] > 0) {
 				config_servo_speed[i] = data[pos+i];
 			} else {
 				config_servo_speed[i] = 30;
 			}
+		// pos += NO_SERVOS; // 6 -> 55
 		config_write = true;
 		mtbbus_send_ack();
 
 	} else if ((command_code == MTBBUS_CMD_MOSI_GET_CONFIG) && (!broadcast)) {
 		uint8_t pos = 0;
-		mtbbus_output_buf[0] = 68;
+		mtbbus_output_buf[0] = 56;
 		mtbbus_output_buf[1] = MTBBUS_CMD_MISO_MODULE_CONFIG;
 		pos = 2;
 		for (size_t i = 0; i < NO_OUTPUTS_ALL; i++)
@@ -461,8 +461,7 @@ void mtbbus_received_isr(bool broadcast, uint8_t command_code, uint8_t *data, ui
 		mtbbus_output_buf[pos] = config_servo_enabled;
 		pos += 1;
 		for (size_t i = 0; i < NO_SERVOS*2; i++) {
-			mtbbus_output_buf[pos+i*2]   = (config_servo_position[i] >> 8) & (0xff);
-			mtbbus_output_buf[pos+i*2+1] = (config_servo_position[i]) & (0xff);
+			mtbbus_output_buf[pos+i] = config_servo_position[i];
 		}
 		pos += NO_SERVOS*2*2;
 		for (size_t i = 0; i < NO_SERVOS; i++)
@@ -496,16 +495,16 @@ void mtbbus_received_isr(bool broadcast, uint8_t command_code, uint8_t *data, ui
 	// specific commands for UNIS
 	} else if ((command_code == MTBBUS_CMD_MOSI_SPECIFIC) && (!broadcast)) {
 		// end of manual positioning
-		if ((data_len == 3) && (data[0] == 3) && (data[1] == 0)) {
+		if ((data_len >= 3) && (data[0] == 3) && (data[1] == 0)) {
 			servo_test_select = 255;
 			mtbbus_send_ack();
 		// set manual position - override normal control
-		} else if ((data_len == 5) && data[0] == 3) {
+		} else if ((data_len >= 4) && data[0] == 3) {
 			uint8_t servo_num = (data[1] >> 1) - 1;
 			if (servo_num < NO_SERVOS) {
 				// right servo selected
 				servo_test_select = servo_num;
-				servo_test_pos = (data[2] << 8) | data[3];
+				servo_test_pos = data[2];
 				mtbbus_send_ack();
 			} else {
 				mtbbus_send_error(MTBBUS_ERROR_UNKNOWN_COMMAND);
