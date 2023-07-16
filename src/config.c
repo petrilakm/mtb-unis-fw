@@ -30,7 +30,7 @@ void config_load(void) {
 	}
 
 	config_mtbbus_speed = eeprom_read_byte(EEPROM_ADDR_MTBBUS_SPEED);
-	if (config_mtbbus_speed > MTBBUS_SPEED_115200)
+	if (config_mtbbus_speed > MTBBUS_SPEED_MAX)
 		config_mtbbus_speed = MTBBUS_SPEED_38400;
 
 	uint8_t boot = eeprom_read_byte(EEPROM_ADDR_BOOT);

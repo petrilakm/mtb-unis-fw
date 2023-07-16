@@ -51,12 +51,21 @@ void mtbbus_set_speed(uint8_t speed) {
 	mtbbus_speed = speed;
 	UBRR0H = 0;
 
-	if (speed == MTBBUS_SPEED_115200)
+	switch (speed) {
+	case MTBBUS_SPEED_230400:
+		UBRR0L = 3;
+		break;
+	case MTBBUS_SPEED_115200:
 		UBRR0L = 7;
-	else if (speed == MTBBUS_SPEED_57600)
+		break;
+	case MTBBUS_SPEED_57600:
 		UBRR0L = 15;
-	else
-		UBRR0L = 23; // 38400 Bd
+		break;
+	case MTBBUS_SPEED_38400:
+	default:
+		UBRR0L = 23;
+		break;
+	}
 
 	UCSR0A &= ~_BV(U2X0);
 }

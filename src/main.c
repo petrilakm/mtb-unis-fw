@@ -509,8 +509,8 @@ void autodetect_mtbbus_speed(void) {
 void mtbbus_auto_speed_next(void) {
 	mtbbus_auto_speed_timer = 0;
 	mtbbus_auto_speed_last++; // relies on continuous interval of speeds
-	if (mtbbus_auto_speed_last > MTBBUS_SPEED_115200)
-		mtbbus_auto_speed_last = 1;
+	if (mtbbus_auto_speed_last > MTBBUS_SPEED_MAX)
+		mtbbus_auto_speed_last = MTBBUS_SPEED_38400;
 	mtbbus_set_speed(mtbbus_auto_speed_last);
 }
 
