@@ -6,6 +6,7 @@
 #include <avr/interrupt.h>
 #include <avr/io.h>
 #include <avr/wdt.h>
+#include <string.h>
 
 #include "common.h"
 #include "io.h"
@@ -343,20 +344,16 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 		mtbbus_send_buf_autolen();
 
 	} else if ((command_code == MTBBUS_CMD_MOSI_SET_CONFIG) && (data_len >= 24) && (!broadcast)) {
-		for (size_t i = 0; i < NO_OUTPUTS; i++)
-			config_safe_state[i] = data[i];
-		for (size_t i = 0; i < NO_OUTPUTS/2; i++)
-			config_inputs_delay[i] = data[NO_OUTPUTS+i];
+		memcpy(config_safe_state, data, NO_OUTPUTS);
+		memcpy(config_inputs_delay, data+NO_OUTPUTS, NO_OUTPUTS);
 		config_write = true;
 		mtbbus_send_ack();
 
 	} else if ((command_code == MTBBUS_CMD_MOSI_GET_CONFIG) && (!broadcast)) {
 		mtbbus_output_buf[0] = 25;
 		mtbbus_output_buf[1] = MTBBUS_CMD_MISO_MODULE_CONFIG;
-		for (size_t i = 0; i < NO_OUTPUTS; i++)
-			mtbbus_output_buf[2+i] = config_safe_state[i];
-		for (size_t i = 0; i < NO_OUTPUTS/2; i++)
-			mtbbus_output_buf[2+NO_OUTPUTS+i] = config_inputs_delay[i];
+		memcpy(mtbbus_output_buf+2, config_safe_state, NO_OUTPUTS);
+		memcpy(mtbbus_output_buf+2+NO_OUTPUTS, config_inputs_delay, NO_OUTPUTS/2);
 		mtbbus_send_buf_autolen();
 
 	} else if ((command_code == MTBBUS_CMD_MOSI_BEACON) && (data_len >= 1)) {
@@ -373,8 +370,7 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 
 		mtbbus_output_buf[0] = data_len+1;
 		mtbbus_output_buf[1] = MTBBUS_CMD_MISO_OUTPUT_SET;
-		for (size_t i = 0; i < data_len; i++)
-			mtbbus_output_buf[2+i] = data[i];
+		memcpy(mtbbus_output_buf+2, data, data_len);
 		mtbbus_send_buf_autolen();
 
 	} else if (command_code == MTBBUS_CMD_MOSI_RESET_OUTPUTS) {
