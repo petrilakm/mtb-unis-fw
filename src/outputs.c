@@ -32,7 +32,7 @@ void outputs_apply_state() {
 		plain_mask <<= 1;
 		plain_state <<= 1;
 
-		_flicker_enabled[i] = _outputs_state[i] & 0x40;
+		_flicker_enabled[i] = ((_outputs_state[i] & 0xC0) == 0x40) ? true : false;
 		if (!_flicker_enabled[i])
 			_flicker_counters[i] = 0;
 
