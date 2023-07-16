@@ -22,23 +22,23 @@
 
 int main();
 static inline void init();
-void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len);
-void mtbbus_send_ack();
-void mtbbus_send_inputs(uint8_t message_code);
-void mtbbus_send_error(uint8_t code);
+void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len); // intentionally not static
+static void mtbbus_send_ack();
+static void mtbbus_send_inputs(uint8_t message_code);
+static void mtbbus_send_error(uint8_t code);
 static inline void leds_update();
-void goto_bootloader();
+void goto_bootloader(); // intentionally not static
 static inline void update_mtbbus_polarity();
-void led_red_ok();
+static void led_red_ok();
 static inline void on_initialized();
 static inline bool mtbbus_addressed();
 static inline void btn_short_press();
 static inline void btn_long_press();
 static inline void autodetect_mtbbus_speed();
 static inline void autodetect_mtbbus_speed_stop();
-void mtbbus_auto_speed_next();
+static void mtbbus_auto_speed_next();
 static inline void mtbbus_auto_speed_received();
-void send_diag_value(uint8_t i);
+static void send_diag_value(uint8_t i);
 
 ///////////////////////////////////////////////////////////////////////////////
 // Defines & global variables
