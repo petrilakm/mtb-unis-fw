@@ -83,6 +83,8 @@ volatile uint8_t mtbbus_auto_speed_timer = 0;
 volatile uint8_t mtbbus_auto_speed_last;
 #define MTBBUS_AUTO_SPEED_TIMEOUT 20 // 200 ms
 
+volatile uint8_t diag_timer = 0;
+
 ///////////////////////////////////////////////////////////////////////////////
 
 int main() {
@@ -96,6 +98,7 @@ int main() {
 			if (outputs_changed_when_setting_scom)
 				outputs_apply_state();
 		}
+
 		if (inputs_debounce_to_update) {
 			inputs_debounce_to_update = false;
 			inputs_debounce_update();
@@ -111,8 +114,13 @@ int main() {
 			btn_long_press();
 		}
 
-	if ((mtbbus_auto_speed_in_progress) && (mtbbus_auto_speed_timer == MTBBUS_AUTO_SPEED_TIMEOUT))
-		mtbbus_auto_speed_next();
+		if ((mtbbus_auto_speed_in_progress) && (mtbbus_auto_speed_timer == MTBBUS_AUTO_SPEED_TIMEOUT))
+			mtbbus_auto_speed_next();
+
+		if (diag_timer >= DIAG_UPDATE_PERIOD) {
+			diag_timer = 0;
+			diag_update();
+		}
 
 		wdt_reset();
 	}
@@ -202,14 +210,8 @@ ISR(TIMER3_COMPA_vect) {
 	if ((mtbbus_auto_speed_in_progress) && (mtbbus_auto_speed_timer < MTBBUS_AUTO_SPEED_TIMEOUT))
 		mtbbus_auto_speed_timer++;
 
-	{
-		static uint8_t diag_timer = 0;
+	if (diag_timer < DIAG_UPDATE_PERIOD)
 		diag_timer++;
-		if (diag_timer >= DIAG_UPDATE_PERIOD) {
-			diag_update();
-			diag_timer = 0;
-		}
-	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
