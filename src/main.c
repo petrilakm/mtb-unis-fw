@@ -122,6 +122,11 @@ int main() {
 			diag_update();
 		}
 
+		if (_init_counter == INIT_TIME) {
+			_init_counter = 0xFF;
+			on_initialized();
+		}
+
 		wdt_reset();
 	}
 }
@@ -195,11 +200,8 @@ ISR(TIMER3_COMPA_vect) {
 	inputs_fall_update();
 	leds_update();
 
-	if (_init_counter < INIT_TIME) {
+	if (_init_counter < INIT_TIME)
 		_init_counter++;
-		if (_init_counter == INIT_TIME)
-			on_initialized();
-	}
 
 	if (mtbbus_timeout < MTBBUS_TIMEOUT_MAX)
 		mtbbus_timeout++;
