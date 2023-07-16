@@ -308,110 +308,150 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 	if (mtbbus_auto_speed_in_progress)
 		mtbbus_auto_speed_received();
 
-	if ((!broadcast) && (command_code == MTBBUS_CMD_MOSI_MODULE_INQUIRY) && (data_len >= 1)) {
-		static bool last_input_changed = false;
-		static bool last_diag_changed = false;
-		static bool first_scan = true;
-		bool last_ok = data[0] & 0x01;
-		if ((inputs_logic_state != inputs_old) || (last_input_changed && !last_ok) || (first_scan)) {
-			// Send inputs changed
-			last_input_changed = true;
-			first_scan = false;
-			mtbbus_send_inputs(MTBBUS_CMD_MISO_INPUT_CHANGED);
-			inputs_old = inputs_logic_state;
-		} else {
-			last_input_changed = false;
+	switch (command_code) {
 
-			if ((mtbbus_warn_flags.all != mtbbus_warn_flags_old.all) || (last_diag_changed && !last_ok)) {
-				last_diag_changed = true;
-				mtbbus_warn_flags_old = mtbbus_warn_flags;
-				send_diag_value(MTBBUS_DV_STATE);
+	case MTBBUS_CMD_MOSI_MODULE_INQUIRY:
+		if ((!broadcast) && (data_len >= 1)) {
+			static bool last_input_changed = false;
+			static bool last_diag_changed = false;
+			static bool first_scan = true;
+			bool last_ok = data[0] & 0x01;
+			if ((inputs_logic_state != inputs_old) || (last_input_changed && !last_ok) || (first_scan)) {
+				// Send inputs changed
+				last_input_changed = true;
+				first_scan = false;
+				mtbbus_send_inputs(MTBBUS_CMD_MISO_INPUT_CHANGED);
+				inputs_old = inputs_logic_state;
 			} else {
-				mtbbus_send_ack();
+				last_input_changed = false;
+
+				if ((mtbbus_warn_flags.all != mtbbus_warn_flags_old.all) || (last_diag_changed && !last_ok)) {
+					last_diag_changed = true;
+					mtbbus_warn_flags_old = mtbbus_warn_flags;
+					send_diag_value(MTBBUS_DV_STATE);
+				} else {
+					mtbbus_send_ack();
+				}
 			}
-		}
+		} else { goto INVALID_MSG; }
+		break;
 
-	} else if ((command_code == MTBBUS_CMD_MOSI_INFO_REQ) && (!broadcast)) {
-		uint16_t bootloader_ver = config_bootloader_version();
-		mtbbus_output_buf[0] = 9;
-		mtbbus_output_buf[1] = MTBBUS_CMD_MISO_MODULE_INFO;
-		mtbbus_output_buf[2] = CONFIG_MODULE_TYPE;
-		mtbbus_output_buf[3] = (mtbbus_warn_flags.all > 0) << 2;
-		mtbbus_output_buf[4] = CONFIG_FW_MAJOR;
-		mtbbus_output_buf[5] = CONFIG_FW_MINOR;
-		mtbbus_output_buf[6] = CONFIG_PROTO_MAJOR;
-		mtbbus_output_buf[7] = CONFIG_PROTO_MINOR;
-		mtbbus_output_buf[8] = bootloader_ver >> 8;
-		mtbbus_output_buf[9] = bootloader_ver & 0xFF;
-		mtbbus_send_buf_autolen();
+	case MTBBUS_CMD_MOSI_INFO_REQ:
+		if (!broadcast) {
+			uint16_t bootloader_ver = config_bootloader_version();
+			mtbbus_output_buf[0] = 9;
+			mtbbus_output_buf[1] = MTBBUS_CMD_MISO_MODULE_INFO;
+			mtbbus_output_buf[2] = CONFIG_MODULE_TYPE;
+			mtbbus_output_buf[3] = (mtbbus_warn_flags.all > 0) << 2;
+			mtbbus_output_buf[4] = CONFIG_FW_MAJOR;
+			mtbbus_output_buf[5] = CONFIG_FW_MINOR;
+			mtbbus_output_buf[6] = CONFIG_PROTO_MAJOR;
+			mtbbus_output_buf[7] = CONFIG_PROTO_MINOR;
+			mtbbus_output_buf[8] = bootloader_ver >> 8;
+			mtbbus_output_buf[9] = bootloader_ver & 0xFF;
+			mtbbus_send_buf_autolen();
+		} else { goto INVALID_MSG; }
+		break;
 
-	} else if ((command_code == MTBBUS_CMD_MOSI_SET_CONFIG) && (data_len >= 24) && (!broadcast)) {
-		memcpy(config_safe_state, data, NO_OUTPUTS);
-		memcpy(config_inputs_delay, data+NO_OUTPUTS, NO_OUTPUTS);
-		config_write = true;
-		mtbbus_send_ack();
+	case MTBBUS_CMD_MOSI_SET_CONFIG:
+		if ((data_len >= 24) && (!broadcast)) {
+			mtbbus_send_ack();
+			memcpy((uint8_t*)config_safe_state, data, NO_OUTPUTS);
+			memcpy((uint8_t*)config_inputs_delay, data+NO_OUTPUTS, NO_OUTPUTS/2);
+			config_write = true;
+		} else { goto INVALID_MSG; }
+		break;
 
-	} else if ((command_code == MTBBUS_CMD_MOSI_GET_CONFIG) && (!broadcast)) {
-		mtbbus_output_buf[0] = 25;
-		mtbbus_output_buf[1] = MTBBUS_CMD_MISO_MODULE_CONFIG;
-		memcpy(mtbbus_output_buf+2, config_safe_state, NO_OUTPUTS);
-		memcpy(mtbbus_output_buf+2+NO_OUTPUTS, config_inputs_delay, NO_OUTPUTS/2);
-		mtbbus_send_buf_autolen();
+	case MTBBUS_CMD_MOSI_GET_CONFIG:
+		if (!broadcast) {
+			mtbbus_output_buf[0] = 25;
+			mtbbus_output_buf[1] = MTBBUS_CMD_MISO_MODULE_CONFIG;
+			memcpy((uint8_t*)mtbbus_output_buf+2, config_safe_state, NO_OUTPUTS);
+			memcpy((uint8_t*)mtbbus_output_buf+2+NO_OUTPUTS, config_inputs_delay, NO_OUTPUTS/2);
+			mtbbus_send_buf_autolen();
+		} else { goto INVALID_MSG; }
+		break;
 
-	} else if ((command_code == MTBBUS_CMD_MOSI_BEACON) && (data_len >= 1)) {
-		beacon = data[0];
+	case MTBBUS_CMD_MOSI_BEACON:
+		if (data_len >= 1) {
+			beacon = data[0];
+			if (!broadcast)
+				mtbbus_send_ack();
+		} else { goto INVALID_MSG; }
+		break;
+
+	case MTBBUS_CMD_MOSI_GET_INPUT:
+		if (!broadcast) {
+			mtbbus_send_inputs(MTBBUS_CMD_MISO_INPUT_STATE);
+		} else { goto INVALID_MSG; }
+		break;
+
+	case MTBBUS_CMD_MOSI_SET_OUTPUT:
+		if ((data_len >= 4) && (!broadcast)) {
+			// Send response first, because setting of outputs takes some time
+			// TODO: make output_set_zipped faster?
+			mtbbus_output_buf[0] = data_len+1;
+			mtbbus_output_buf[1] = MTBBUS_CMD_MISO_OUTPUT_SET;
+			memcpy((uint8_t*)mtbbus_output_buf+2, data, data_len);
+			mtbbus_send_buf_autolen();
+
+			outputs_set_zipped(data, data_len);
+			outputs_changed_when_setting_scom = true;
+		} else { goto INVALID_MSG; }
+		break;
+
+	case MTBBUS_CMD_MOSI_RESET_OUTPUTS:
 		if (!broadcast)
 			mtbbus_send_ack();
-
-	} else if ((command_code == MTBBUS_CMD_MOSI_GET_INPUT) && (!broadcast)) {
-		mtbbus_send_inputs(MTBBUS_CMD_MISO_INPUT_STATE);
-
-	} else if ((command_code == MTBBUS_CMD_MOSI_SET_OUTPUT) && (data_len >= 4) && (!broadcast)) {
-		outputs_set_zipped(data, data_len);
-		outputs_changed_when_setting_scom = true;
-
-		mtbbus_output_buf[0] = data_len+1;
-		mtbbus_output_buf[1] = MTBBUS_CMD_MISO_OUTPUT_SET;
-		memcpy(mtbbus_output_buf+2, data, data_len);
-		mtbbus_send_buf_autolen();
-
-	} else if (command_code == MTBBUS_CMD_MOSI_RESET_OUTPUTS) {
 		outputs_set_full(config_safe_state);
+		break;
 
-		if (!broadcast)
+	case MTBBUS_CMD_MOSI_CHANGE_ADDR:
+		if ((data_len >= 1) && (!broadcast)) {
+			mtbbus_send_error(MTBBUS_ERROR_UNSUPPORTED_COMMAND);
+		} else { goto INVALID_MSG; }
+		break;
+
+	case MTBBUS_CMD_MOSI_CHANGE_SPEED:
+		if (data_len >= 1) {
+			config_mtbbus_speed = data[0];
+			config_write = true;
+			mtbbus_set_speed(data[0]);
+
+			if (!broadcast)
+				mtbbus_send_ack();
+		} else { goto INVALID_MSG; }
+		break;
+
+	case MTBBUS_CMD_MOSI_FWUPGD_REQUEST:
+		if ((data_len >= 1) && (!broadcast)) {
+			config_boot_fwupgd();
+			mtbbus_on_sent = &goto_bootloader;
 			mtbbus_send_ack();
+		} else { goto INVALID_MSG; }
+		break;
 
-	} else if ((command_code == MTBBUS_CMD_MOSI_CHANGE_ADDR) && (data_len >= 1) && (!broadcast)) {
-		mtbbus_send_error(MTBBUS_ERROR_UNSUPPORTED_COMMAND);
-
-	} else if ((command_code == MTBBUS_CMD_MOSI_CHANGE_SPEED) && (data_len >= 1)) {
-		config_mtbbus_speed = data[0];
-		config_write = true;
-		mtbbus_set_speed(data[0]);
-
-		if (!broadcast)
-			mtbbus_send_ack();
-
-	} else if ((command_code == MTBBUS_CMD_MOSI_FWUPGD_REQUEST) && (data_len >= 1) && (!broadcast)) {
-		config_boot_fwupgd();
-		mtbbus_on_sent = &goto_bootloader;
-		mtbbus_send_ack();
-
-	} else if (command_code == MTBBUS_CMD_MOSI_REBOOT) {
+	case MTBBUS_CMD_MOSI_REBOOT:
 		if (broadcast) {
 			goto_bootloader();
 		} else {
 			mtbbus_on_sent = &goto_bootloader;
 			mtbbus_send_ack();
 		}
+		break;
 
-	} else if ((command_code == MTBBUS_CMD_MOSI_DIAG_VALUE_REQ) && (data_len >= 1)) {
-		send_diag_value(data[0]);
+	case MTBBUS_CMD_MOSI_DIAG_VALUE_REQ:
+		if (data_len >= 1) {
+			send_diag_value(data[0]);
+		} else { goto INVALID_MSG; }
+		break;
 
-	} else {
+INVALID_MSG:
+	default:
 		if (!broadcast)
 			mtbbus_send_error(MTBBUS_ERROR_UNKNOWN_COMMAND);
-	}
+
+	};
 }
 
 // Warning: functions below don't check mtbbus_can_fill_output_buf(), bacause
@@ -476,7 +516,7 @@ void mtbbus_auto_speed_next() {
 
 static inline void mtbbus_auto_speed_received() {
 	mtbbus_auto_speed_in_progress = false;
-	config_mtbbus_speed = mtbbus_auto_speed_last;
+	config_mtbbus_speed = mtbbus_speed;
 	config_write = true;
 	io_led_blue_off();
 }
