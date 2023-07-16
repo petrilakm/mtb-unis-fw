@@ -46,29 +46,29 @@ static void send_diag_value(uint8_t i);
 
 #define LED_GR_ON 5
 #define LED_GR_OFF 2
-volatile uint8_t led_gr_counter = 0;
+uint8_t led_gr_counter = 0;
 
 #define LED_RED_OK_ON 40
 #define LED_RED_OK_OFF 20
 #define LED_RED_ERR_ON 100
 #define LED_RED_ERR_OFF 50
-volatile uint8_t led_red_counter = 0;
+uint8_t led_red_counter = 0;
 
-volatile bool beacon = false;
+bool beacon = false;
 
 #define LED_BLUE_BEACON_ON 100
 #define LED_BLUE_BEACON_OFF 50
-volatile uint8_t led_blue_counter = 0;
+uint8_t led_blue_counter = 0;
 
 volatile bool inputs_debounce_to_update = false;
-volatile bool outputs_changed_when_setting_scom = false;
+bool outputs_changed_when_setting_scom = false;
 
 __attribute__((used, section(".fwattr"))) struct {
 	uint8_t no_pages;
 	uint16_t crc;
 } fwattr;
 
-volatile bool initialized = false;
+bool initialized = false;
 volatile uint8_t _init_counter = 0;
 #define INIT_TIME 50 // 500 ms
 

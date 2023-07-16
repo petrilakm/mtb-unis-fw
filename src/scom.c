@@ -1,9 +1,9 @@
 #include <string.h>
 #include "scom.h"
 
-volatile int8_t _codes[NO_OUTPUTS]; // -1 = not coding anything
-volatile int8_t _codes_new[NO_OUTPUTS];
-volatile uint8_t _phase = 0;
+int8_t _codes[NO_OUTPUTS]; // -1 = not coding anything
+int8_t _codes_new[NO_OUTPUTS];
+uint8_t _phase = 0;
 
 #define SCOM_PHASE_STARTBIT1 0
 #define SCOM_PHASE_STARTBIT0 1

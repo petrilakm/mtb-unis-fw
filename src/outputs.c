@@ -18,12 +18,12 @@ const uint8_t _flicker_periods[] = { // in times of calls to outputs_update (10 
 
 // Each output has it's flickering counter to avoid neccessity for single
 // lowest-common-multiplier counter (LCM is too big)
-volatile uint8_t _flicker_counters[NO_OUTPUTS] = {0, };
-volatile bool _flicker_enabled[NO_OUTPUTS] = {false, };
+uint8_t _flicker_counters[NO_OUTPUTS] = {0, };
+bool _flicker_enabled[NO_OUTPUTS] = {false, };
 
 // State according to ‹protocol›
 // ‹https://github.com/kmzbrnoI/mtbbus-protocol/blob/master/modules/uni.md›
-volatile uint8_t _outputs_state[NO_OUTPUTS] = {0, };
+uint8_t _outputs_state[NO_OUTPUTS] = {0, };
 
 void outputs_apply_state() {
 	uint16_t plain_mask = 0;
