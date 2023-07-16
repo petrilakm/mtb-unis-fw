@@ -60,7 +60,6 @@ volatile bool beacon = false;
 volatile uint8_t led_blue_counter = 0;
 
 volatile bool inputs_debounce_to_update = false;
-volatile bool scom_to_update = false;
 volatile bool outputs_changed_when_setting_scom = false;
 
 __attribute__((used, section(".fwattr"))) struct {
@@ -84,6 +83,7 @@ volatile uint8_t mtbbus_auto_speed_last;
 #define MTBBUS_AUTO_SPEED_TIMEOUT 20 // 200 ms
 
 volatile uint8_t diag_timer = 0;
+volatile bool t3_elapsed = false;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -91,14 +91,6 @@ int main() {
 	init();
 
 	while (true) {
-		if (scom_to_update) {
-			scom_to_update = false;
-			outputs_changed_when_setting_scom = false;
-			scom_update();
-			if (outputs_changed_when_setting_scom)
-				outputs_apply_state();
-		}
-
 		if (inputs_debounce_to_update) {
 			inputs_debounce_to_update = false;
 			inputs_debounce_update();
@@ -125,6 +117,19 @@ int main() {
 		if (_init_counter == INIT_TIME) {
 			_init_counter = 0xFF;
 			on_initialized();
+		}
+
+		if (t3_elapsed) {
+			t3_elapsed = false;
+
+			outputs_update();
+			inputs_fall_update();
+			leds_update();
+
+			outputs_changed_when_setting_scom = false;
+			scom_update();
+			if (outputs_changed_when_setting_scom)
+				outputs_apply_state();
 		}
 
 		wdt_reset();
@@ -195,10 +200,7 @@ ISR(TIMER3_COMPA_vect) {
 	if ((TCNT1H > 0) & (TCNT1H < OCR1AH))
 		mtbbus_warn_flags.bits.missed_timer = true;
 
-	scom_to_update = true;
-	outputs_update();
-	inputs_fall_update();
-	leds_update();
+	t3_elapsed = true;
 
 	if (_init_counter < INIT_TIME)
 		_init_counter++;
