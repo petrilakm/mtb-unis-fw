@@ -18,7 +18,7 @@ uint8_t config_mtbbus_speed;
 #define EEPROM_ADDR_INPUTS_DELAY           ((void*)0x20)
 
 
-void config_load() {
+void config_load(void) {
 	uint8_t version = eeprom_read_byte(EEPROM_ADDR_VERSION);
 	if (version == 0xFF) {
 		// default EEPROM content → reset config
@@ -41,7 +41,7 @@ void config_load() {
 	eeprom_read_block(config_inputs_delay, EEPROM_ADDR_INPUTS_DELAY, NO_OUTPUTS/2);
 }
 
-void config_save() {
+void config_save(void) {
 	eeprom_update_byte(EEPROM_ADDR_VERSION, 1);
 	eeprom_update_byte(EEPROM_ADDR_MTBBUS_SPEED, config_mtbbus_speed);
 	eeprom_update_block(config_safe_state, EEPROM_ADDR_SAFE_STATE, NO_OUTPUTS);
@@ -55,11 +55,11 @@ uint8_t input_delay(uint8_t input) {
 	return (input%2 == 0) ? both & 0x0F : (both >> 4) & 0x0F;
 }
 
-void config_boot_fwupgd() {
+void config_boot_fwupgd(void) {
 	eeprom_update_byte(EEPROM_ADDR_BOOT, CONFIG_BOOT_FWUPGD);
 }
 
-void config_boot_normal() {
+void config_boot_normal(void) {
 	eeprom_update_byte(EEPROM_ADDR_BOOT, CONFIG_BOOT_NORMAL);
 }
 
@@ -67,7 +67,7 @@ void config_int_wdrf(bool value) {
 	eeprom_update_byte(EEPROM_ADDR_INT_WDRF, value);
 }
 
-bool config_is_int_wdrf() {
+bool config_is_int_wdrf(void) {
 	return eeprom_read_byte(EEPROM_ADDR_INT_WDRF) & 1;
 }
 

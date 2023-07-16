@@ -23,17 +23,17 @@ volatile uint8_t diag_step = DIAG_STEP_OVER-1;
 ///////////////////////////////////////////////////////////////////////////////
 // Function prototypes
 
-static inline void vcc_prepare_measure();
-static inline void adc_start();
+static inline void vcc_prepare_measure(void);
+static inline void adc_start(void);
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void diag_init() {
+void diag_init(void) {
 	ADCSRA = (1 << ADIE) | (1 << ADEN); // enable ADC interrupt, enable ADC
 	ADCSRA |= 0x5; // prescaler 32×
 }
 
-void diag_update() {
+void diag_update(void) {
 	// called each 100 ms
 	switch (diag_step) {
 	case DIAG_STEP_VCC_READY:
@@ -58,12 +58,12 @@ void diag_update() {
 		diag_step = 0;
 }
 
-static inline void vcc_prepare_measure() {
+void vcc_prepare_measure(void) {
 	ADMUX = (1 << REFS0); // AVCC with external capacitor at AREF pin
 	ADMUX |= 0x1E; // measure internal 1V22 band-gap reference
 }
 
-static inline void adc_start() {
+void adc_start(void) {
 	ADCSRA |= (1 << ADSC); // start conversion
 }
 

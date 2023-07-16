@@ -13,16 +13,16 @@ extern uint16_t inputs_logic_state;
 extern uint16_t inputs_debounced_state;
 
 extern bool btn_pressed;
-void btn_on_pressed();
-void btn_on_depressed();
+void btn_on_pressed(void);
+void btn_on_depressed(void);
 
 // You may use this variable for any purpose, this unit does not work with it.
 extern uint16_t inputs_old;
 
 // This function should be called each 100 us
-void inputs_debounce_update();
+void inputs_debounce_update(void);
 
 // This function should be called each 10 ms
-void inputs_fall_update();
+void inputs_fall_update(void);
 
 #endif

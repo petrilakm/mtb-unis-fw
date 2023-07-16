@@ -46,9 +46,9 @@ typedef union {
 extern mtbbus_warn_flags_t mtbbus_warn_flags;
 extern mtbbus_warn_flags_t mtbbus_warn_flags_old;
 
-void diag_init();
-void diag_update(); // called each 100 ms
-void vcc_start_measure();
+void diag_init(void);
+void diag_update(void); // called each 100 ms
+void vcc_start_measure(void);
 
 #define DIAG_UPDATE_PERIOD 10 // 100 ms
 extern volatile uint16_t vcc_voltage;

@@ -17,7 +17,7 @@ bool io_get_input_raw(uint8_t inum) {
 	return (io_get_inputs_raw() >> inum) & 0x1;
 }
 
-uint16_t io_get_inputs_raw() {
+uint16_t io_get_inputs_raw(void) {
 	uint16_t inputs = bit_reverse(PINF);
 	inputs |= ((PINE >> 3) & 0x1F) << 8;
 	inputs |= ((PINB >> INPUT_13) & 0x1) << 13;
@@ -47,7 +47,7 @@ void io_set_outputs_raw_mask(uint16_t state, uint16_t mask) {
 	PORTC = bit_reverse(high);
 }
 
-uint16_t io_get_outputs_raw() {
+uint16_t io_get_outputs_raw(void) {
 	return (bit_reverse(PORTC) << 8) | bit_reverse(PORTD);
 }
 

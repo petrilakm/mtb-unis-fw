@@ -12,11 +12,11 @@ uint8_t _phase = 0;
 #define SCOM_PHASE_STOPBIT   9
 #define SCOM_PHASE_END      30
 
-void scom_init() {
+void scom_init(void) {
 	scom_reset();
 }
 
-void scom_update() {
+void scom_update(void) {
 	uint16_t outputs = 0;
 	uint16_t mask = 0;
 
@@ -47,7 +47,7 @@ void scom_update() {
 	}
 }
 
-void scom_reset() {
+void scom_reset(void) {
 	memset((int8_t*)_codes, -1, NO_OUTPUTS);
 	memset((int8_t*)_codes_new, -1, NO_OUTPUTS);
 }
