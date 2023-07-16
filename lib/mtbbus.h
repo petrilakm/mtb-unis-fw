@@ -13,14 +13,12 @@
 #define MTBBUS_OUTPUT_BUF_MAX_SIZE_USER 120
 #define MTBBUS_OUTPUT_BUF_MAX_SIZE 128
 #define MTBBUS_INPUT_BUF_MAX_SIZE 128
-extern uint8_t mtbbus_output_buf[MTBBUS_OUTPUT_BUF_MAX_SIZE];
-extern uint8_t mtbbus_output_buf_size;
 
-extern uint8_t mtbbus_input_buf[MTBBUS_INPUT_BUF_MAX_SIZE];
-extern uint8_t mtbbus_input_buf_size;
+extern volatile uint8_t mtbbus_output_buf[MTBBUS_OUTPUT_BUF_MAX_SIZE];
+extern volatile uint8_t mtbbus_output_buf_size;
 
-extern uint8_t mtbbus_addr;
-extern uint8_t mtbbus_speed;
+extern volatile uint8_t mtbbus_addr;
+extern volatile uint8_t mtbbus_speed;
 
 // ‹data› starts with Command code byte
 // ‹size› is amount of data bytes + 1
@@ -33,6 +31,7 @@ extern void (*volatile mtbbus_on_sent)();
 
 void mtbbus_init(uint8_t addr, uint8_t speed);
 void mtbbus_set_speed(uint8_t speed);
+void mtbbus_update();
 
 bool mtbbus_can_fill_output_buf();
 int mtbbus_send(uint8_t *data, uint8_t size);

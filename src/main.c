@@ -92,6 +92,8 @@ int main() {
 	init();
 
 	while (true) {
+		mtbbus_update();
+
 		if (inputs_debounce_to_update) {
 			inputs_debounce_to_update = false;
 			inputs_debounce_update();
