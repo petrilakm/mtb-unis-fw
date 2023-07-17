@@ -22,8 +22,8 @@ extern volatile uint8_t mtbbus_speed;
 
 // ‹data› starts with Command code byte
 // ‹size› is amount of data bytes + 1
-extern void (*volatile mtbbus_on_receive)(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len);
-extern void (*volatile mtbbus_on_sent)();
+extern void (*mtbbus_on_receive)(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len);
+extern void (*mtbbus_on_sent)();
 
 typedef enum {
 	MTBBUS_SPEED_38400 = 1,

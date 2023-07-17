@@ -17,11 +17,12 @@ volatile bool receiving = false;
 volatile uint16_t received_crc = 0;
 volatile uint8_t received_addr;
 volatile bool received = false;
+volatile bool sent = false;
 
 volatile uint8_t mtbbus_addr;
 volatile uint8_t mtbbus_speed;
-void (*volatile mtbbus_on_receive)(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len) = NULL;
-void (*volatile mtbbus_on_sent)() = NULL;
+void (*mtbbus_on_receive)(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len) = NULL;
+void (*mtbbus_on_sent)() = NULL;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -77,6 +78,15 @@ void mtbbus_update() {
 			mtbbus_on_receive(received_addr == 0, mtbbus_input_buf[1],
 			                  (uint8_t*)mtbbus_input_buf+2, mtbbus_input_buf_size-3);
 	}
+
+	if (sent) {
+		sent = false;
+		if (mtbbus_on_sent != NULL) {
+			void (*tmp)() = mtbbus_on_sent;
+			mtbbus_on_sent = NULL;
+			tmp();
+		}
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -99,6 +109,7 @@ int mtbbus_send(uint8_t *data, uint8_t size) {
 int mtbbus_send_buf() {
 	if (sending)
 		return 1;
+	sent = false;
 
 	size_t i = mtbbus_output_buf_size;
 	uint16_t crc = crc16modbus_bytes(0, (uint8_t*)mtbbus_output_buf, mtbbus_output_buf_size);
@@ -141,11 +152,7 @@ ISR(USART0_TX_vect) {
 	} else {
 		uart_in();
 		sending = false;
-		if (mtbbus_on_sent != NULL) {
-			void (*tmp)() = mtbbus_on_sent;
-			mtbbus_on_sent = NULL;
-			tmp();
-		}
+		sent = true;
 	}
 }
 
