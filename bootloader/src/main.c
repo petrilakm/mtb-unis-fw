@@ -15,12 +15,12 @@
 // Function prototypes
 
 int main();
-void check_and_boot();
-static inline void main_program();
-bool fwcrc_ok();
-static inline void _mtbbus_init();
+static void check_and_boot(void);
+static inline void main_program(void);
+bool fwcrc_ok(void);
+static inline void _mtbbus_init(void);
 void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len);
-static void mtbbus_send_ack();
+static void mtbbus_send_ack(void);
 static void mtbbus_send_error(uint8_t code);
 
 
@@ -113,7 +113,7 @@ int main() {
 	return 0;
 }
 
-static inline void _mtbbus_init() {
+static inline void _mtbbus_init(void) {
 	uint8_t mtbbus_speed = eeprom_read_byte(EEPROM_ADDR_MTBBUS_SPEED);
 	if (mtbbus_speed > MTBBUS_SPEED_115200)
 		mtbbus_speed = MTBBUS_SPEED_38400;
@@ -125,14 +125,14 @@ static inline void _mtbbus_init() {
 	mtbbus_on_receive = mtbbus_received;
 }
 
-void check_and_boot() {
+void check_and_boot(void) {
 	if (fwcrc_ok())
 		main_program();
 
 	error_flags.bits.crc = true;
 }
 
-static inline void main_program() {
+static inline void main_program(void) {
 	cli();
 	MCUCR = (1 << IVCE);
 	MCUCR = 0; // move interrupts back to normal program
@@ -141,7 +141,7 @@ static inline void main_program() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-bool fwcrc_ok() {
+bool fwcrc_ok(void) {
 	boot_rww_enable_safe();
 	uint8_t no_pages = pgm_read_byte_far(&fwattr.no_pages);
 	uint16_t crc_read = pgm_read_word_far(&fwattr.crc);
@@ -237,13 +237,13 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 	}
 }
 
-static void mtbbus_send_ack() {
+void mtbbus_send_ack(void) {
 	mtbbus_output_buf[0] = 1;
 	mtbbus_output_buf[1] = MTBBUS_CMD_MISO_ACK;
 	mtbbus_send_buf_autolen();
 }
 
-static void mtbbus_send_error(uint8_t code) {
+void mtbbus_send_error(uint8_t code) {
 	mtbbus_output_buf[0] = 2;
 	mtbbus_output_buf[1] = MTBBUS_CMD_MISO_ERROR;
 	mtbbus_output_buf[2] = code;
