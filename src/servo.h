@@ -20,6 +20,7 @@ extern volatile uint8_t servo_test_select;
 extern volatile uint16_t servo_test_pos;
 
 void servo_init(void);
+void servo_init_position(uint8_t servo, bool state); // inis servo last position
 void servo_update(void); // call every 10 ms
 
 void servo_set_enable(void); // propagate enabled and disabled servos to outputs

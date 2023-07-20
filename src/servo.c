@@ -8,6 +8,7 @@ uint16_t servo_pos[NO_SERVOS] = {4000,}; // actual servo position
 volatile uint8_t servo_state[NO_SERVOS] = {0,}; // used in ISR !
 // timeout in stop state
 uint8_t servo_timeout[NO_SERVOS] = {0,};
+uint8_t servo_enabled = 0;
 // for manual servo positioning
 volatile uint8_t servo_test_select = 255;
 uint8_t servo_test_select_last = 255;
@@ -82,7 +83,6 @@ uint8_t servo_get_config_speed(uint8_t num) {
 
 void servo_init(void) {
 	// timers inicialized in main
-	servo_set_enable();
 	PORTB |= (1 << PB4); // servo power enable
 	PORTE |= (1 << PE3); // default output for servo is L
 	PORTE |= (1 << PE4);
@@ -90,6 +90,15 @@ void servo_init(void) {
 	PORTB |= (1 << PE5);
 	PORTB |= (1 << PE6);
 	PORTB |= (1 << PE7);
+	servo_enabled = 0; // all disable, first determine last position, then enable
+	servo_set_enable();
+}
+
+void servo_init_position(uint8_t servo, bool state) {
+	if (servo < NO_SERVOS) return;
+	servo_state[servo] = (state) ? 2 : 1;
+	servo_enabled |= (config_servo_enabled & (1 << servo));
+	servo_set_enable();
 }
 
 void servo_update(void) {
@@ -190,7 +199,7 @@ void servo_update(void) {
 }
 
 void servo_set_enable(void) {
-	uint8_t mask = config_servo_enabled;
+	uint8_t mask = servo_enabled;
 	uint8_t i;
 	for (i=0; i<NO_SERVOS; i++) {
 		// set each servo
