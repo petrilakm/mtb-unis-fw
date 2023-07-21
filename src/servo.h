@@ -16,6 +16,7 @@
 
 extern volatile uint8_t servo_state[NO_SERVOS];
 extern uint16_t servo_pos[NO_SERVOS];
+extern uint8_t servo_enabled;
 extern volatile uint8_t servo_test_select;
 extern volatile uint16_t servo_test_pos;
 

@@ -95,18 +95,21 @@ void servo_init(void) {
 
 void servo_init_position(uint8_t servo, bool state) {
 	if (servo > NO_SERVOS) return;
-	// determine initial servo position
-	servo_state[servo] = (state) ? 2 : 1;
-	// load position to RAM
-	servo_pos[servo] = servo_get_config_position(servo, servo_state[servo] & 0x03);
-	// generate signal now
-	servo_timeout[servo] = 0;
-	// test if enabled, then enable
-	servo_enabled |= (config_servo_enabled & (1 << servo));
-	// disable unused servo
-	if (!(servo_enabled & (1 << servo))) {
-		servo_state[servo] |= 0x10;
-	}
+        bool servoena;
+        servoena = (config_servo_enabled >> servo) & 1;
+        if (servoena) {
+            // determine initial servo position
+            servo_state[servo] = (state) ? 2 : 1;
+            // load position to RAM
+            servo_pos[servo] = servo_get_config_position(servo, servo_state[servo] & 0x03);
+            // generate signal now
+            servo_timeout[servo] = 0;
+            // enable servo
+            servo_enabled |= (1 << servo);
+        } else {
+            // disable unused servo
+            servo_state[servo] |= 0x10;
+        }
 }
 
 void servo_update(void) {
@@ -153,7 +156,7 @@ void servo_update(void) {
 		// for each servo
 		for(i=0; i<NO_SERVOS; i++) {
 			// only enabled servos
-			if ((servo_enabled >> i) & 1) {
+			//if (((servo_enabled >> i) & 1) > 0) {
 				state = servo_state[i];
 				if (i == servo_test_select) {
 					// servo in manual mode:
@@ -199,9 +202,9 @@ void servo_update(void) {
 					}
 					servo_set_raw(i, servo_pos[i]);
 				}
-			} else {
-				servo_state[i] |= 16; // disable unused servo
-			}
+			//} else {
+			//	servo_state[i] |= 16; // disable unused servo
+			//}
 		}
 	}
 }

@@ -208,7 +208,7 @@ static inline void init(void) {
 static inline void init_post(void) {
 	uint8_t i;
 	uint8_t inp;
-	for(i=0; i< NO_SERVOS; i++) {
+	for(i=0; i < NO_SERVOS; i++) {
 		inp = (inputs_logic_state >> (i*2)) & 3; // extract input state
 		servo_init_position(i, (inp == 2)); // pos 2 -> servopos 2, else use servopos 1
 	}
