@@ -126,7 +126,6 @@ int main(void) {
 
 		if (config_write) {
 			config_save();
-			servo_set_enable();
 			config_write = false;
 		}
 

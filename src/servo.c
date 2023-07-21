@@ -42,7 +42,7 @@ void servo_set_raw(uint8_t num, uint16_t pos) {
 }
 
 uint8_t servo_get_input_state(uint8_t num) {
-	if (num > 5) {
+	if (num > NO_SERVOS) {
 		return 0;
 	}
 	uint8_t tmp;
@@ -73,7 +73,7 @@ uint16_t servo_get_config_position(uint8_t num, uint8_t state) {
 	if (state == 2) {
 		return (config_servo_position[num*2+1]+SERVO_OFFSET_POS) << 5;
 	}
-	return (100<<5);
+	return (127<<5);
 }
 
 uint8_t servo_get_config_speed(uint8_t num) {
@@ -91,14 +91,22 @@ void servo_init(void) {
 	PORTB |= (1 << PE6);
 	PORTB |= (1 << PE7);
 	servo_enabled = 0; // all disable, first determine last position, then enable
-	servo_set_enable();
 }
 
 void servo_init_position(uint8_t servo, bool state) {
-	if (servo < NO_SERVOS) return;
+	if (servo > NO_SERVOS) return;
+	// determine initial servo position
 	servo_state[servo] = (state) ? 2 : 1;
+	// load position to RAM
+	servo_pos[servo] = servo_get_config_position(servo, servo_state[servo] & 0x03);
+	// generate signal now
+	servo_timeout[servo] = 0;
+	// test if enabled, then enable
 	servo_enabled |= (config_servo_enabled & (1 << servo));
-	servo_set_enable();
+	// disable unused servo
+	if (!(servo_enabled & (1 << servo))) {
+		servo_state[servo] |= 0x10;
+	}
 }
 
 void servo_update(void) {
@@ -145,7 +153,7 @@ void servo_update(void) {
 		// for each servo
 		for(i=0; i<NO_SERVOS; i++) {
 			// only enabled servos
-			if ((config_servo_enabled >> i) & 1) {
+			if ((servo_enabled >> i) & 1) {
 				state = servo_state[i];
 				if (i == servo_test_select) {
 					// servo in manual mode:
@@ -195,16 +203,6 @@ void servo_update(void) {
 				servo_state[i] |= 16; // disable unused servo
 			}
 		}
-	}
-}
-
-void servo_set_enable(void) {
-	uint8_t mask = servo_enabled;
-	uint8_t i;
-	for (i=0; i<NO_SERVOS; i++) {
-		// set each servo
-		// ToDo: do not set enable on start !
-		servo_set_enable_one(i, (mask >> i) & 1);
 	}
 }
 
