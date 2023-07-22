@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <util/delay.h>
 
 #include "mtbbus.h"
 #include "../src/io.h"
@@ -13,6 +14,7 @@ volatile bool sending = false;
 
 volatile uint8_t mtbbus_input_buf[MTBBUS_INPUT_BUF_MAX_SIZE];
 volatile uint8_t mtbbus_input_buf_size = 0;
+volatile uint8_t mtbbus_input_buf_size_2 = 0;
 volatile bool receiving = false;
 volatile uint16_t received_crc = 0;
 volatile uint8_t received_addr;
@@ -79,7 +81,7 @@ void mtbbus_update(void) {
 		received = false;
 		if (mtbbus_on_receive != NULL)
 			mtbbus_on_receive(received_addr == 0, mtbbus_input_buf[1],
-			                  (uint8_t*)mtbbus_input_buf+2, mtbbus_input_buf_size-3);
+			                  (uint8_t*)mtbbus_input_buf+2, mtbbus_input_buf_size_2-3);
 	}
 
 	if (sent) {
@@ -208,8 +210,10 @@ static inline void _mtbbus_received_non_ninth(uint8_t data) {
 	if (mtbbus_input_buf_size >= mtbbus_input_buf[0]+3) {
 		// whole message received
 		uint16_t msg_crc = (mtbbus_input_buf[mtbbus_input_buf_size-1] << 8) | (mtbbus_input_buf[mtbbus_input_buf_size-2]);
-		if (received_crc == msg_crc)
+		if (received_crc == msg_crc) {
 			received = true;
+			mtbbus_input_buf_size_2 = mtbbus_input_buf_size;
+		}
 
 		// Prepare for next receiving from XpressNET device
 		receiving = false;
