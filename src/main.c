@@ -458,8 +458,6 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 			memcpy(config_safe_state, data, NO_OUTPUTS_ALL);
 			pos = NO_OUTPUTS_ALL; // 16+12= 28
 			memcpy(config_inputs_delay, data+pos, NO_OUTPUTS/2);
-			for (size_t i = 0; i < NO_OUTPUTS/2; i++)
-				config_inputs_delay[i] = data[pos+i];
 			pos += (NO_OUTPUTS/2); // 8 -> 36
 			config_servo_enabled = data[pos];
 			pos++; // 1 -> 37
@@ -483,20 +481,15 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 			mtbbus_output_buf[0] = 56;
 			mtbbus_output_buf[1] = MTBBUS_CMD_MISO_MODULE_CONFIG;
 			pos = 2;
-			for (size_t i = 0; i < NO_OUTPUTS_ALL; i++)
-				mtbbus_output_buf[pos+i] = config_safe_state[i];
+			memcpy((uint8_t*)mtbbus_output_buf+pos, config_safe_state, NO_OUTPUTS_ALL);
 			pos += NO_OUTPUTS_ALL;
-			for (size_t i = 0; i < NO_OUTPUTS/2; i++)
-				mtbbus_output_buf[pos+i] = config_inputs_delay[i];
+			memcpy((uint8_t*)mtbbus_output_buf+pos, config_inputs_delay, NO_OUTPUTS/2);
 			pos += NO_OUTPUTS/2;
 			mtbbus_output_buf[pos] = config_servo_enabled;
 			pos += 1;
-			for (size_t i = 0; i < NO_SERVOS*2; i++) {
-				mtbbus_output_buf[pos+i] = config_servo_position[i];
-			}
+			memcpy((uint8_t*)mtbbus_output_buf+pos, config_servo_position, NO_SERVOS*2);
 			pos += NO_SERVOS*2*2;
-			for (size_t i = 0; i < NO_SERVOS; i++)
-				mtbbus_output_buf[pos+i] = config_servo_speed[i];
+			memcpy((uint8_t*)mtbbus_output_buf+pos, config_servo_speed, NO_SERVOS);
 			pos += NO_SERVOS;
 			mtbbus_send_buf_autolen();
 		} else { goto INVALID_MSG; }
