@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <string.h>
 #include "outputs.h"
 #include "io.h"
 #include "scom.h"
@@ -75,8 +76,7 @@ void outputs_set_zipped(uint8_t data[], size_t length) {
 }
 
 void outputs_set_full(uint8_t data[NO_OUTPUTS]) {
-	for (size_t i = 0; i < NO_OUTPUTS; i++)
-		_outputs_state[i] = data[i];
+	memcpy((uint8_t*)_outputs_state, (uint8_t*)data, NO_OUTPUTS);
 	outputs_need_apply = true;
 }
 

@@ -2,6 +2,7 @@
  */
 
 #include <stdbool.h>
+#include <string.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
 #include <avr/io.h>
@@ -106,10 +107,6 @@ int main(void) {
 			outputs_changed_when_setting_scom = false;
 			scom_update();
 			scom_to_update = false;
-			/*
-			if (outputs_changed_when_setting_scom)
-				outputs_apply_state();
-			*/
 		}
 
 		if (inputs_debounce_to_update) {
@@ -443,17 +440,15 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 
 	} else if ((command_code == MTBBUS_CMD_MOSI_SET_CONFIG) && (data_len >= 56) && (!broadcast)) {
 		uint8_t pos = 0;
-		for (size_t i = 0; i < NO_OUTPUTS_ALL; i++)
-			config_safe_state[i] = data[pos+i];
+		memcpy(config_safe_state, data, NO_OUTPUTS_ALL);
 		pos = NO_OUTPUTS_ALL; // 16+12= 28
+		memcpy(config_inputs_delay, data+pos, NO_OUTPUTS/2);
 		for (size_t i = 0; i < NO_OUTPUTS/2; i++)
 			config_inputs_delay[i] = data[pos+i];
 		pos += (NO_OUTPUTS/2); // 8 -> 36
 		config_servo_enabled = data[pos];
 		pos++; // 1 -> 37
-		for (size_t i = 0; i < NO_SERVOS*2; i++) {
-			config_servo_position[i]  = data[pos+i];
-		}
+		memcpy(config_servo_position, data+pos, NO_SERVOS*2);
 		pos += (NO_SERVOS*2); // 12 -> 49
 		for (size_t i = 0; i < NO_SERVOS; i++)
 			if (data[pos+i] > 0) {
