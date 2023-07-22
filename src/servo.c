@@ -96,12 +96,14 @@ void servo_init(void) {
 void servo_init_position(uint8_t servo, bool state) {
 	if (servo > NO_SERVOS) return;
         bool servoena;
+		uint8_t statenum;
         servoena = (config_servo_enabled >> servo) & 1;
         if (servoena) {
             // determine initial servo position
-            servo_state[servo] = (state) ? 2 : 1;
+			statenum = (state) ? 2 : 1;
+            servo_state[servo] = statenum;
             // load position to RAM
-            servo_pos[servo] = servo_get_config_position(servo, servo_state[servo] & 0x03);
+            servo_pos[servo] = servo_get_config_position(servo, statenum);
             // generate signal now
             servo_timeout[servo] = 0;
             // enable servo

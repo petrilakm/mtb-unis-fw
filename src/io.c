@@ -7,6 +7,7 @@
 volatile uint16_t output_shadow = 0;
 uint16_t output_virt = 0;
 
+volatile uint8_t dbg = 0;
 
 void io_init() {
 	DDRD = 0xFF; // outputs 0-7

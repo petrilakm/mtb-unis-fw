@@ -159,7 +159,15 @@ int main(void) {
 		}
 
 		wdt_reset();
-		_delay_us(50);
+/*
+		dbg = (OCR1A >> 5);
+		bool st;
+		for(uint8_t i=0; i<8; i++) {
+			st = ((dbg >> (i)) & 1) == 1; 
+			io_set_output_raw(15-i, st);
+		}
+*/
+		//_delay_us(50);
 	}
 }
 
@@ -493,8 +501,7 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 	} else if ((command_code == MTBBUS_CMD_MOSI_SET_OUTPUT) && (data_len >= 6) && (!broadcast)) {
 		mtbbus_output_buf[0] = data_len+1;
 		mtbbus_output_buf[1] = MTBBUS_CMD_MISO_OUTPUT_SET;
-		for (size_t i = 0; i < data_len; i++)
-			mtbbus_output_buf[2+i] = data[i];
+		memcpy((uint8_t*)mtbbus_output_buf+2, data, data_len);
 		mtbbus_send_buf_autolen();
 
 		outputs_set_zipped(data, data_len);

@@ -10,6 +10,8 @@
 #include <stdint.h>
 #include <avr/io.h>
 
+extern volatile uint8_t dbg;
+
 // Defines below are informative only, they are basically never used.
 // If you change IO pins mapping, look into ‹io.c› and change approprite
 // functions.

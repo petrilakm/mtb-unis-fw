@@ -31,10 +31,6 @@ void outputs_apply_state() {
 	if (!outputs_need_apply)
 		return;
 	outputs_need_apply = false;
-// DEBUG !!!
-// pokud je ve for i=>12, tak se procesor zasekne, Watchdog nepomůže !
-// tak na i úplně nesejde 
-// DEBUG !!!
 	for (int i = 0; i < NO_OUTPUTS; i++) {
 		//io_set_output_raw(i, _outputs_state[i]);
 		_flicker_enabled[i] = _outputs_state[i] & 0x40;
