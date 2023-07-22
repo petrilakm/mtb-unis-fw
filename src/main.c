@@ -24,7 +24,7 @@
 int main();
 static inline void init(void);
 static inline void init_post(void);
-void mtbbus_received_isr(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len);
+void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len);
 void mtbbus_send_ack(void);
 void mtbbus_send_inputs(uint8_t message_code);
 void mtbbus_send_error(uint8_t code);
@@ -48,24 +48,24 @@ void send_diag_value(uint8_t i);
 
 #define LED_GR_ON 5
 #define LED_GR_OFF 2
-volatile uint8_t led_gr_counter = 0;
+uint8_t led_gr_counter = 0;
 
 #define LED_RED_OK_ON 40
 #define LED_RED_OK_OFF 20
 #define LED_RED_ERR_ON 100
 #define LED_RED_ERR_OFF 50
-volatile uint8_t led_red_counter = 0;
+uint8_t led_red_counter = 0;
 
-volatile bool beacon = false;
+bool beacon = false;
 
 #define LED_BLUE_BEACON_ON 100
 #define LED_BLUE_BEACON_OFF 50
 #define LED_BLUE_OK 4
-volatile uint8_t led_blue_counter = 0;
+uint8_t led_blue_counter = 0;
 
 volatile bool inputs_debounce_to_update = false;
 volatile bool scom_to_update = false;
-volatile bool outputs_changed_when_setting_scom = false;
+bool outputs_changed_when_setting_scom = false;
 volatile bool timeout_100hz = false;
 
 __attribute__((used, section(".fwattr"))) struct {
@@ -73,15 +73,15 @@ __attribute__((used, section(".fwattr"))) struct {
 	uint16_t crc;
 } fwattr;
 
-volatile bool initialized = false;
-volatile uint8_t _init_counter = 0;
-volatile bool _init_counter_flag = false;
+bool initialized = false;
+uint8_t _init_counter = 0;
+bool _init_counter_flag = false;
 #define INIT_TIME 50 // 500 ms
 
 #define MTBBUS_TIMEOUT_MAX 100 // 1 s
-volatile uint8_t mtbbus_timeout = MTBBUS_TIMEOUT_MAX; // increment each 10 ms
+uint8_t mtbbus_timeout = MTBBUS_TIMEOUT_MAX; // increment each 10 ms
 
-volatile uint8_t btn_press_time = 0;
+uint8_t btn_press_time = 0;
 
 volatile bool mtbbus_auto_speed_in_progress = false;
 volatile uint8_t mtbbus_auto_speed_timer = 0;
@@ -94,7 +94,9 @@ int main(void) {
 	init();
 
 	while (true) {
-		if (_init_counter_flag) {
+		mtbbus_update();
+
+		if (_init_counter_flag == true) {
 			_init_counter_flag = false;
 			init_post();	// init servo positions
 			on_initialized(); // set leds
@@ -120,6 +122,36 @@ int main(void) {
 			outputs_update();
 			inputs_fall_update();
 			leds_update();
+
+			if (_init_counter < INIT_TIME) {
+				_init_counter++;
+				if (_init_counter == INIT_TIME)
+					_init_counter_flag = true;
+			}
+
+			if (mtbbus_timeout < MTBBUS_TIMEOUT_MAX)
+				mtbbus_timeout++;
+
+			if ((btn_pressed) && (btn_press_time < 100)) {
+				btn_press_time++;
+				if (btn_press_time >= 100)
+					btn_long_press();
+			}
+
+			if (mtbbus_auto_speed_in_progress) {
+				mtbbus_auto_speed_timer++;
+				if (mtbbus_auto_speed_timer >= MTBBUS_AUTO_SPEED_TIMEOUT)
+					mtbbus_auto_speed_next();
+			}
+
+			{
+				static uint8_t diag_timer = 0;
+				diag_timer++;
+				if (diag_timer >= DIAG_UPDATE_PERIOD) {
+					diag_update();
+					diag_timer = 0;
+				}
+			}
 		}
 
 		outputs_apply_state();
@@ -195,7 +227,7 @@ static inline void init(void) {
 
 	error_flags.bits.addr_zero = (config_mtbbus_addr == 0);
 	mtbbus_init(config_mtbbus_addr, config_mtbbus_speed);
-	mtbbus_on_receive = mtbbus_received_isr;
+	mtbbus_on_receive = mtbbus_received;
 
 	update_mtbbus_polarity();
 	diag_init();
@@ -242,36 +274,6 @@ ISR(TIMER0_COMP_vect) {
 
 	scom_to_update = true;
 	timeout_100hz = true;
-
-	if (_init_counter < INIT_TIME) {
-		_init_counter++;
-		if (_init_counter == INIT_TIME)
-			_init_counter_flag = true;
-	}
-
-	if (mtbbus_timeout < MTBBUS_TIMEOUT_MAX)
-		mtbbus_timeout++;
-
-	if ((btn_pressed) && (btn_press_time < 100)) {
-		btn_press_time++;
-		if (btn_press_time >= 100)
-			btn_long_press();
-	}
-
-	if (mtbbus_auto_speed_in_progress) {
-		mtbbus_auto_speed_timer++;
-		if (mtbbus_auto_speed_timer >= MTBBUS_AUTO_SPEED_TIMEOUT)
-			mtbbus_auto_speed_next();
-	}
-
-	{
-		static uint8_t diag_timer = 0;
-		diag_timer++;
-		if (diag_timer >= DIAG_UPDATE_PERIOD) {
-			diag_update();
-			diag_timer = 0;
-		}
-	}
 }
 
 ISR(TIMER1_COMPA_vect) {
@@ -383,7 +385,7 @@ static inline void btn_long_press(void) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void mtbbus_received_isr(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len) {
+void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len) {
 	if (!initialized)
 		return;
 
