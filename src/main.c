@@ -2,11 +2,11 @@
  */
 
 #include <stdbool.h>
-#include <string.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
 #include <avr/io.h>
 #include <avr/wdt.h>
+#include <string.h>
 
 #include "common.h"
 #include "io.h"
@@ -23,26 +23,29 @@
 // Function prototypes
 
 int main();
-static inline void init(void);
-static inline void init_post(void);
-void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len);
-void mtbbus_send_ack(void);
-void mtbbus_send_inputs(uint8_t message_code);
-void mtbbus_send_error(uint8_t code);
+static void init(void);
+static void init_post(void);
+void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len); // intentionally not static
+static void mtbbus_send_ack(void);
+static void mtbbus_send_inputs(uint8_t message_code);
+static void mtbbus_send_error(uint8_t code);
 static inline void leds_update(void);
-void goto_bootloader(void);
+void goto_bootloader(void); // intentionally not static
 static inline void update_mtbbus_polarity(void);
-void led_red_ok(void);
-void led_blue_ok(void);
+static void led_red_ok(void);
+static void led_blue_ok(void);
 static inline void on_initialized(void);
 static inline bool mtbbus_addressed(void);
 static inline void btn_short_press(void);
 static inline void btn_long_press(void);
 static inline void autodetect_mtbbus_speed(void);
 static inline void autodetect_mtbbus_speed_stop(void);
-void mtbbus_auto_speed_next(void);
+static void mtbbus_auto_speed_next(void);
 static inline void mtbbus_auto_speed_received(void);
-void send_diag_value(uint8_t i);
+static void send_diag_value(uint8_t i);
+static void handle_flags(void);
+static void timer_100hz(void);
+static void handle_timers(void);
 
 ///////////////////////////////////////////////////////////////////////////////
 // Defines & global variables
@@ -67,7 +70,6 @@ uint8_t led_blue_counter = 0;
 volatile bool inputs_debounce_to_update = false;
 volatile bool scom_to_update = false;
 bool outputs_changed_when_setting_scom = false;
-volatile bool timeout_100hz = false;
 
 __attribute__((used, section(".fwattr"))) struct {
 	uint8_t no_pages;
@@ -82,94 +84,99 @@ bool _init_counter_flag = false;
 #define MTBBUS_TIMEOUT_MAX 100 // 1 s
 uint8_t mtbbus_timeout = MTBBUS_TIMEOUT_MAX; // increment each 10 ms
 
+#define BTN_PRESS_1S 100
 uint8_t btn_press_time = 0;
 
 volatile bool mtbbus_auto_speed_in_progress = false;
 volatile uint8_t mtbbus_auto_speed_timer = 0;
 volatile uint8_t mtbbus_auto_speed_last;
 #define MTBBUS_AUTO_SPEED_TIMEOUT 20 // 200 ms
+volatile bool t3_elapsed = false;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-int main(void) {
+int main() {
 	init();
 
 	while (true) {
 		mtbbus_update();
-
-		if (_init_counter_flag == true) {
-			_init_counter_flag = false;
-			init_post();	// init servo positions
-			on_initialized(); // set leds
-		}
-
-		if (scom_to_update) {
-			outputs_changed_when_setting_scom = false;
-			scom_update();
-			scom_to_update = false;
-		}
-
-		if (inputs_debounce_to_update) {
-			inputs_debounce_update();
-			inputs_debounce_to_update = false;
-		}
-		if (timeout_100hz) {
-			timeout_100hz = false;
-			servo_update();
-			outputs_update();
-			inputs_fall_update();
-			leds_update();
-
-			if (_init_counter < INIT_TIME) {
-				_init_counter++;
-				if (_init_counter == INIT_TIME)
-					_init_counter_flag = true;
-			}
-
-			if (mtbbus_timeout < MTBBUS_TIMEOUT_MAX)
-				mtbbus_timeout++;
-
-			if ((btn_pressed) && (btn_press_time < 100)) {
-				btn_press_time++;
-				if (btn_press_time >= 100)
-					btn_long_press();
-			}
-
-			if (mtbbus_auto_speed_in_progress) {
-				mtbbus_auto_speed_timer++;
-				if (mtbbus_auto_speed_timer >= MTBBUS_AUTO_SPEED_TIMEOUT)
-					mtbbus_auto_speed_next();
-			}
-
-			{
-				static uint8_t diag_timer = 0;
-				diag_timer++;
-				if (diag_timer >= DIAG_UPDATE_PERIOD) {
-					diag_update();
-					diag_timer = 0;
-				}
-			}
-		}
-
 		outputs_apply_state();
-
-		if (config_write) {
-			config_save();
-			config_write = false;
-		}
+		handle_flags();
 
 		wdt_reset();
-		/*
-		bool st;
-		for(uint8_t i=0; i<8; i++) {
-			st = ((dbg >> (i)) & 1) == 1; 
-			io_set_output_raw(8+i, st);
-		}
-		*/
 	}
 }
 
-static inline void init(void) {
+static void handle_flags(void) {
+	if (_init_counter_flag == true) {
+		_init_counter_flag = false;
+		init_post();	// init servo positions
+		on_initialized(); // set leds
+	}
+
+	if (scom_to_update) {
+		outputs_changed_when_setting_scom = false;
+		scom_update();
+		scom_to_update = false;
+	}
+
+	if (inputs_debounce_to_update) {
+		inputs_debounce_to_update = false;
+		inputs_debounce_update();
+	}
+	if (t3_elapsed) {
+		t3_elapsed = false;
+		timer_100hz();
+	}
+	if (config_write) {
+		config_save();
+		config_write = false;
+	}
+}
+
+static void timer_100hz(void) {
+	scom_to_update = true;
+	servo_update();
+	outputs_update();
+	inputs_fall_update();
+	leds_update();
+	handle_timers();
+}
+
+static void handle_timers(void) {
+	if (_init_counter < INIT_TIME) {
+		_init_counter++;
+		if (_init_counter == INIT_TIME)
+			_init_counter_flag = true;
+	}
+
+	if (mtbbus_timeout < MTBBUS_TIMEOUT_MAX)
+		mtbbus_timeout++;
+
+	if ((btn_pressed) && (btn_press_time < 100)) {
+		btn_press_time++;
+		if (btn_press_time >= 100)
+			btn_long_press();
+	}
+
+	if (mtbbus_auto_speed_in_progress) {
+		mtbbus_auto_speed_timer++;
+		if (mtbbus_auto_speed_timer >= MTBBUS_AUTO_SPEED_TIMEOUT)
+			mtbbus_auto_speed_next();
+	}
+
+	{
+		static uint8_t diag_timer = 0;
+		diag_timer++;
+		if (diag_timer >= DIAG_UPDATE_PERIOD) {
+			diag_update();
+			diag_timer = 0;
+		}
+	}
+}
+
+
+static void init(void) {
 	cli();
 	wdt_disable();
 	TIMSK &= 0xC3; // clean-up after bootloader 
@@ -240,7 +247,7 @@ static inline void init(void) {
 	sei(); // enable interrupts globally
 }
 
-static inline void init_post(void) {
+static void init_post(void) {
 	uint8_t i;
 	uint8_t inp;
 	for(i=0; i < NO_SERVOS; i++) {
@@ -249,16 +256,16 @@ static inline void init_post(void) {
 	}
 }
 
-static inline void soft_reset(void) {
+static inline void soft_reset() {
 	__asm__ volatile ("ijmp" ::"z" (0));
 }
 
-static inline void hard_reset(void) {
+static inline void hard_reset() {
 	wdt_enable(WDTO_15MS);
 	while (true);
 }
 
-static inline void on_initialized(void) {
+static void on_initialized(void) {
 	io_led_red_off();
 	io_led_green_off();
 	io_led_blue_off();
@@ -275,8 +282,7 @@ ISR(TIMER0_COMP_vect) {
 	if (TCNT0 > 0)
 		mtbbus_warn_flags.bits.missed_timer = true;
 
-	scom_to_update = true;
-	timeout_100hz = true;
+	t3_elapsed = true;
 }
 
 ISR(TIMER1_COMPA_vect) {
@@ -309,7 +315,7 @@ ISR(TIMER3_CAPT_vect) {
 }
 ///////////////////////////////////////////////////////////////////////////////
 
-static inline void leds_update(void) {
+static void leds_update(void) {
 	if (led_gr_counter > 0) {
 		led_gr_counter--;
 		if (led_gr_counter == LED_GR_OFF)
@@ -363,25 +369,22 @@ void btn_on_pressed(void) {
 }
 
 void btn_on_depressed(void) {
-	if (btn_press_time < 100) // < 1 s
+	if (btn_press_time < BTN_PRESS_1S)
 		btn_short_press();
 }
 
-static inline void btn_short_press(void) {
+void btn_short_press(void) {
 	if (mtbbus_auto_speed_in_progress) {
 		autodetect_mtbbus_speed_stop();
 		return;
 	}
 
-	//uint8_t _mtbbus_addr = io_get_addr_raw();
-	//error_flags.bits.addr_zero = (_mtbbus_addr == 0);
-	//mtbbus_addr = _mtbbus_addr;
 	if (mtbbus_addr != 0)
 		led_red_ok();
 	update_mtbbus_polarity();
 }
 
-static inline void btn_long_press(void) {
+void btn_long_press(void) {
 	if (!mtbbus_addressed())
 		autodetect_mtbbus_speed();
 }
@@ -511,7 +514,8 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 
 	case MTBBUS_CMD_MOSI_SET_OUTPUT:
 		if ((data_len >= 6) && (!broadcast)) {
-			dbg = data_len;
+			// Send response first, because setting of outputs takes some time
+			// TODO: make output_set_zipped faster?
 			mtbbus_output_buf[0] = data_len+1;
 			mtbbus_output_buf[1] = MTBBUS_CMD_MISO_OUTPUT_SET;
 			memcpy((uint8_t*)mtbbus_output_buf+2, data, data_len);
@@ -608,10 +612,10 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 		} else { goto INVALID_MSG; }
 		break;
 
-	INVALID_MSG:
-		default:
-			if (!broadcast)
-				mtbbus_send_error(MTBBUS_ERROR_UNKNOWN_COMMAND);
+INVALID_MSG:
+	default:
+		if (!broadcast)
+			mtbbus_send_error(MTBBUS_ERROR_UNKNOWN_COMMAND);
 	}
 }
 
@@ -659,7 +663,7 @@ static inline bool mtbbus_addressed(void) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static inline void autodetect_mtbbus_speed(void) {
+void autodetect_mtbbus_speed(void) {
 	io_led_blue_on();
 	mtbbus_auto_speed_in_progress = true;
 	mtbbus_auto_speed_last = 0; // relies on first speed 38400 kBd = 0x01
@@ -674,14 +678,14 @@ void mtbbus_auto_speed_next(void) {
 	mtbbus_set_speed(mtbbus_auto_speed_last);
 }
 
-static inline void mtbbus_auto_speed_received(void) {
+void mtbbus_auto_speed_received(void) {
 	mtbbus_auto_speed_in_progress = false;
 	config_mtbbus_speed = mtbbus_auto_speed_last;
 	config_write = true;
 	io_led_blue_off();
 }
 
-static inline void autodetect_mtbbus_speed_stop(void) {
+void autodetect_mtbbus_speed_stop(void) {
 	if (mtbbus_auto_speed_in_progress) {
 		mtbbus_auto_speed_in_progress = false;
 		io_led_blue_off();

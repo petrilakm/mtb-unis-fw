@@ -47,7 +47,7 @@ void scom_update() {
 	}
 }
 
-void scom_reset() {
+void scom_reset(void) {
 	memset((int8_t*)_codes, -1, NO_OUTPUTS);
 	memset((int8_t*)_codes_new, -1, NO_OUTPUTS);
 }
