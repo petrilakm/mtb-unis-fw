@@ -29,15 +29,17 @@ static void mtbbus_send_error(uint8_t code);
 
 #define EEPROM_ADDR_MTBBUS_SPEED           ((uint8_t*)0x01)
 #define EEPROM_ADDR_BOOT                   ((uint8_t*)0x03)
+#define EEPROM_ADDR_MTBBUS_ADDR            ((uint8_t*)0x04)
 #define EEPROM_ADDR_BOOTLOADER_VER_MAJOR   ((uint8_t*)0x08)
 #define EEPROM_ADDR_BOOTLOADER_VER_MINOR   ((uint8_t*)0x09)
 
 #define CONFIG_BOOT_NORMAL 0x00
 #define CONFIG_BOOT_FWUPGD 0x01
 
-#define CONFIG_MODULE_TYPE 0x15
+#define CONFIG_MODULE_TYPE 0x50
 #define CONFIG_FW_MAJOR 1
 #define CONFIG_FW_MINOR 3
+
 #define CONFIG_PROTO_MAJOR 4
 #define CONFIG_PROTO_MINOR 0
 
@@ -124,7 +126,7 @@ static inline void _mtbbus_init(void) {
 	if (mtbbus_speed > MTBBUS_SPEED_MAX)
 		mtbbus_speed = MTBBUS_SPEED_38400;
 
-	uint8_t _mtbbus_addr = io_get_addr_raw();
+	uint8_t _mtbbus_addr = eeprom_read_byte(EEPROM_ADDR_MTBBUS_ADDR);
 	error_flags.bits.addr_zero = (_mtbbus_addr == 0);
 
 	mtbbus_init(_mtbbus_addr, mtbbus_speed);

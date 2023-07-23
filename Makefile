@@ -104,7 +104,7 @@ $(BUILDDIR)/%.hex: $(BUILDDIR)/%.elf
 	@echo
 	@echo $(MSG_FLASH) $@
 	$(OBJCOPY) -O $(FORMAT) -R .eeprom $< $@_nocrc
-	./calc_crc.py $@_nocrc $@ $(CRC_POS)
+	python3 ./calc_crc.py $@_nocrc $@ $(CRC_POS)
 
 $(BUILDDIR)/%.eep: $(BUILDDIR)/%.elf
 	@echo

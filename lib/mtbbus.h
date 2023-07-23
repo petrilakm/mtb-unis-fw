@@ -17,6 +17,9 @@
 extern volatile uint8_t mtbbus_output_buf[MTBBUS_OUTPUT_BUF_MAX_SIZE];
 extern volatile uint8_t mtbbus_output_buf_size;
 
+extern volatile uint8_t mtbbus_input_buf[MTBBUS_INPUT_BUF_MAX_SIZE];
+extern volatile uint8_t mtbbus_input_buf_size;
+
 extern volatile uint8_t mtbbus_addr;
 extern volatile uint8_t mtbbus_speed;
 
@@ -35,7 +38,8 @@ typedef enum {
 
 void mtbbus_init(uint8_t addr, uint8_t speed);
 void mtbbus_set_speed(uint8_t speed);
-void mtbbus_update();
+void mtbbus_set_addr(uint8_t addr);
+void mtbbus_update(void);
 
 bool mtbbus_can_fill_output_buf();
 int mtbbus_send(uint8_t *data, uint8_t size);

@@ -25,61 +25,54 @@ bool _flicker_enabled[NO_OUTPUTS] = {false, };
 // ‹https://github.com/kmzbrnoI/mtbbus-protocol/blob/master/modules/uni.md›
 uint8_t _outputs_state[NO_OUTPUTS] = {0, };
 
-void outputs_apply_state(void) {
-	uint16_t plain_mask = 0;
-	uint16_t plain_state = 0;
+bool outputs_need_apply = false;
 
-	for (int i = NO_OUTPUTS-1; i >= 0; i--) {
-		plain_mask <<= 1;
-		plain_state <<= 1;
-
+void outputs_apply_state() {
+	if (!outputs_need_apply)
+		return;
+	outputs_need_apply = false;
+	for (int i = 0; i < NO_OUTPUTS; i++) {
 		_flicker_enabled[i] = ((_outputs_state[i] & 0xC0) == 0x40) ? true : false;
-		if (!_flicker_enabled[i])
+		if (!_flicker_enabled[i]) {
 			_flicker_counters[i] = 0;
-
-		if ((_outputs_state[i] & 0x80) == 0)
-			scom_disable_output(i);
-
-		if (_outputs_state[i] & 0x80) { // S-COM
-			scom_output(i, _outputs_state[i] & 0x7F);
-		} else if ((_outputs_state[i] & 0x40) == 0) { // plain output
-			plain_mask |= 1;
-			if (_outputs_state[i] & 1)
-				plain_state |= 1;
+			if (_outputs_state[i] & 0x80) { // S-COM
+				scom_output(i, _outputs_state[i] & 0x7F);
+			} else { // plain output
+				//scom_disable_output(i);
+				scom_output(i, -1);
+				io_set_output_raw(i, _outputs_state[i]);
+			}
 		}
 	}
-
-	io_set_outputs_raw_mask(plain_state, plain_mask);
 }
 
 void outputs_set_zipped(uint8_t data[], size_t length) {
-	if (length < 4)
+	if (length < 6)
 		return;
 
 	uint16_t full_mask = data[1] | (data[0] << 8);
-	uint16_t bin_state = data[3] | (data[2] << 8);
-	size_t bytei = 4;
+	uint16_t bin_state = data[5] | (data[4] << 8);
+	size_t bytei = 6;
 
-	for (size_t i = 0; i < NO_OUTPUTS; i++) {
-		if ((full_mask & 1) == 0) {
-			_outputs_state[i] = bin_state & 1;
+	for (uint8_t i = 0; i < NO_OUTPUTS; i++) {
+		if (((full_mask) & 1) == 0) {
+			_outputs_state[i] = (bin_state) & 1;
 		} else {
 			if (bytei < length) {
 				_outputs_state[i] = data[bytei];
 				bytei++;
 			}
 		}
-
 		full_mask >>= 1;
 		bin_state >>= 1;
 	}
 
-	outputs_apply_state();
+	output_virt = data[3] | (data[2] << 8);
 }
 
 void outputs_set_full(uint8_t data[NO_OUTPUTS]) {
 	memcpy((uint8_t*)_outputs_state, (uint8_t*)data, NO_OUTPUTS);
-	outputs_apply_state();
+	outputs_need_apply = true;
 }
 
 void outputs_update(void) {
@@ -98,4 +91,5 @@ void outputs_update(void) {
 			_flicker_counters[i] = 0;
 		}
 	}
+	outputs_need_apply = true;
 }

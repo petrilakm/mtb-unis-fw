@@ -35,3 +35,5 @@ build
 obj
 *.dep
 *.swp
+
+pspad.ppr

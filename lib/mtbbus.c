@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <util/delay.h>
 
 #include "mtbbus.h"
 #include "../src/io.h"
@@ -13,6 +14,7 @@ volatile bool sending = false;
 
 volatile uint8_t mtbbus_input_buf[MTBBUS_INPUT_BUF_MAX_SIZE];
 volatile uint8_t mtbbus_input_buf_size = 0;
+volatile uint8_t mtbbus_input_buf_size_2 = 0;
 volatile bool receiving = false;
 volatile uint16_t received_crc = 0;
 volatile uint8_t received_addr;
@@ -21,6 +23,7 @@ volatile bool sent = false;
 
 volatile uint8_t mtbbus_addr;
 volatile uint8_t mtbbus_speed;
+
 void (*mtbbus_on_receive)(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len) = NULL;
 void (*mtbbus_on_sent)() = NULL;
 
@@ -47,7 +50,6 @@ void mtbbus_init(uint8_t addr, uint8_t speed) {
 	UCSR0B = _BV(RXCIE0) | _BV(TXCIE0) | _BV(UCSZ02) | _BV(RXEN0) | _BV(TXEN0);  // RX, TX enable; RX, TX interrupt enable
 }
 
-
 void mtbbus_set_speed(uint8_t speed) {
 	mtbbus_speed = speed;
 	UBRR0H = 0;
@@ -71,12 +73,16 @@ void mtbbus_set_speed(uint8_t speed) {
 	UCSR0A &= ~_BV(U2X0);
 }
 
-void mtbbus_update() {
+void mtbbus_set_addr(uint8_t addr) {
+	mtbbus_addr = addr;
+}
+
+void mtbbus_update(void) {
 	if (received) {
 		received = false;
 		if (mtbbus_on_receive != NULL)
 			mtbbus_on_receive(received_addr == 0, mtbbus_input_buf[1],
-			                  (uint8_t*)mtbbus_input_buf+2, mtbbus_input_buf_size-3);
+			                  (uint8_t*)mtbbus_input_buf+2, mtbbus_input_buf_size_2-3);
 	}
 
 	if (sent) {
@@ -205,8 +211,11 @@ static inline void _mtbbus_received_non_ninth(uint8_t data) {
 	if (mtbbus_input_buf_size >= mtbbus_input_buf[0]+3) {
 		// whole message received
 		uint16_t msg_crc = (mtbbus_input_buf[mtbbus_input_buf_size-1] << 8) | (mtbbus_input_buf[mtbbus_input_buf_size-2]);
-		if (received_crc == msg_crc)
+		if (received_crc == msg_crc) {
 			received = true;
+			// double buffering for proper operation of SET_OUTPUTS
+			mtbbus_input_buf_size_2 = mtbbus_input_buf_size;
+		}
 
 		receiving = false;
 		received_crc = 0;
