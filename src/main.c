@@ -197,6 +197,7 @@ void init(void) {
 	mcucsr.bits.borf = false; // brownout detects basically all power-on resets
 	mtbbus_warn_flags.all = (mcucsr.all >> 1) & 0x0F;
 
+        uart_in();
 	io_init();
 	io_led_red_on();
 	io_led_blue_on();
@@ -258,6 +259,7 @@ static void init_post(void) {
 		inp = (inputs_logic_state >> (i*2)) & 3; // extract input state
 		servo_init_position(i, (inp == 2)); // pos 2 -> servopos 2, else use servopos 1
 	}
+	PORTB |= (1 << PB4); // servo power enable
 }
 
 static inline void soft_reset() {

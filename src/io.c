@@ -10,6 +10,9 @@ uint16_t output_virt = 0;
 volatile uint8_t dbg = 0;
 
 void io_init() {
+    PORTB = 0;
+    PORTC = 0;
+    PORTD = 0;
 	DDRD = 0xFF; // outputs 0-7
 	DDRC = 0xFF; // outputs 8-15
 	DDRB = 0xF0; // servo outputs & servo power enable

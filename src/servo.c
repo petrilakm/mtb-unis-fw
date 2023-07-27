@@ -83,7 +83,7 @@ uint8_t servo_get_config_speed(uint8_t num) {
 
 void servo_init(void) {
 	// timers inicialized in main
-	PORTB |= (1 << PB4); // servo power enable
+	PORTB &= ~(1 << PB4); // servo power disable
 	PORTE |= (1 << PE3); // default output for servo is L
 	PORTE |= (1 << PE4);
 	PORTE |= (1 << PE5);
@@ -95,23 +95,23 @@ void servo_init(void) {
 
 void servo_init_position(uint8_t servo, bool state) {
 	if (servo > NO_SERVOS) return;
-        bool servoena;
-		uint8_t statenum;
-        servoena = (config_servo_enabled >> servo) & 1;
-        if (servoena) {
-            // determine initial servo position
-			statenum = (state) ? 2 : 1;
-            servo_state[servo] = statenum;
-            // load position to RAM
-            servo_pos[servo] = servo_get_config_position(servo, statenum);
-            // generate signal now
-            servo_timeout[servo] = 0;
-            // enable servo
-            servo_enabled |= (1 << servo);
-        } else {
-            // disable unused servo
-            servo_state[servo] |= 0x10;
-        }
+	bool servoena;
+	uint8_t statenum;
+	servoena = ((config_servo_enabled >> servo) & 1) == 1;
+	if (servoena) {
+		// determine initial servo position
+		statenum = (state) ? 2 : 1;
+		servo_state[servo] = statenum;
+		// load position to RAM
+		servo_pos[servo] = servo_get_config_position(servo, statenum);
+		// generate signal now
+		servo_timeout[servo] = 0;
+		// enable servo
+		servo_enabled |= (1 << servo);
+	} else {
+		// disable unused servo
+		servo_state[servo] |= 0x10;
+	}
 }
 
 void servo_update(void) {
