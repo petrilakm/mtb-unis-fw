@@ -158,7 +158,7 @@ void servo_update(void) {
 		// for each servo
 		for(i=0; i<NO_SERVOS; i++) {
 			// only enabled servos
-			//if (((servo_enabled >> i) & 1) > 0) {
+			if (((servo_enabled >> i) & 1) > 0) {
 				state = servo_state[i];
 				if (i == servo_test_select) {
 					// servo in manual mode:
@@ -204,9 +204,9 @@ void servo_update(void) {
 					}
 					servo_set_raw(i, servo_pos[i]);
 				}
-			//} else {
-			//	servo_state[i] |= 16; // disable unused servo
-			//}
+			} else {
+				servo_state[i] |= 16; // disable unused servo
+			}
 		}
 	}
 }
