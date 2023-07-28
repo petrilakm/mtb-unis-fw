@@ -82,6 +82,7 @@ uint8_t servo_get_config_speed(uint8_t num) {
 
 
 void servo_init(void) {
+	uint8_t servo;
 	// timers inicialized in main
 	PORTB &= ~(1 << PB4); // servo power disable
 	PORTE |= (1 << PE3); // default output for servo is L
@@ -90,6 +91,9 @@ void servo_init(void) {
 	PORTB |= (1 << PE5);
 	PORTB |= (1 << PE6);
 	PORTB |= (1 << PE7);
+	for (servo = 0; servo < NO_SERVOS; servo++) {
+		servo_pos[servo] = servo_get_config_position(servo, 1);
+	}
 	servo_enabled = 0; // all disable, first determine last position, then enable
 }
 
@@ -97,7 +101,7 @@ void servo_init_position(uint8_t servo, bool state) {
 	if (servo > NO_SERVOS) return;
 	bool servoena;
 	uint8_t statenum;
-	servoena = ((config_servo_enabled >> servo) & 1) == 1;
+	servoena = (((config_servo_enabled >> servo) & 1) > 0);
 	if (servoena) {
 		// determine initial servo position
 		statenum = (state) ? 2 : 1;
@@ -105,9 +109,10 @@ void servo_init_position(uint8_t servo, bool state) {
 		// load position to RAM
 		servo_pos[servo] = servo_get_config_position(servo, statenum);
 		// generate signal now
-		servo_timeout[servo] = 0;
+		servo_timeout[servo] = 200; // pulses after init => 2 s
 		// enable servo
 		servo_enabled |= (1 << servo);
+		servo_set_raw(servo, servo_pos[servo]);
 	} else {
 		// disable unused servo
 		servo_state[servo] |= 0x10;
@@ -150,7 +155,7 @@ void servo_update(void) {
 			if (servo_test_timeout == 0) {
 				// end of manual mode, return to normal mode
 				servo_state[servo_test_select] &= ~16;  // enable servo signal
-				servo_timeout[servo_test_select] = 0; // reset timeout for servo operation
+				servo_timeout[servo_test_select] = 50; // reset timeout for servo operation
 				servo_test_select = 255; // deselect manual servo
 			}
 		}

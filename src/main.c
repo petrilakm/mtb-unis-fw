@@ -81,7 +81,10 @@ __attribute__((used, section(".fwattr"))) struct {
 bool initialized = false;
 uint8_t _init_counter = 0;
 bool _init_counter_flag = false;
+uint8_t _init_counter2 = 0;
+bool _init_counter2_flag = false;
 #define INIT_TIME 50 // 500 ms
+#define INIT2_TIME 50 // 500 ms after
 
 #define MTBBUS_TIMEOUT_MAX 100 // 1 s
 uint8_t mtbbus_timeout = MTBBUS_TIMEOUT_MAX; // increment each 10 ms
@@ -114,8 +117,12 @@ int main() {
 static void handle_flags(void) {
 	if (_init_counter_flag == true) {
 		_init_counter_flag = false;
-		init_post();	// init servo positions
 		on_initialized(); // set leds
+	}
+
+	if (_init_counter2_flag == true) {
+		_init_counter2_flag = false;
+		init_post();	// init servo positions
 	}
 
 	if (scom_to_update) {
@@ -152,6 +159,12 @@ static void handle_timers(void) {
 		_init_counter++;
 		if (_init_counter == INIT_TIME)
 			_init_counter_flag = true;
+	} else {
+		if (_init_counter2 < INIT2_TIME) {
+			_init_counter2++;
+			if (_init_counter2 == INIT2_TIME)
+				_init_counter2_flag = true;
+		}
 	}
 
 	if (mtbbus_timeout < MTBBUS_TIMEOUT_MAX)
@@ -302,7 +315,7 @@ ISR(TIMER3_COMPA_vect) {
 ISR(TIMER1_CAPT_vect) {
 	uint8_t i;
 	for (i=0; i<3; i++) {
-		if (servo_state[i] & 0x10) {
+		if ((servo_state[i] & 0x10) > 0) {
 			servo_set_enable_one(i, false);
 		} else {
 			servo_set_enable_one(i, true);
@@ -312,7 +325,7 @@ ISR(TIMER1_CAPT_vect) {
 ISR(TIMER3_CAPT_vect) {
 	uint8_t i;
 	for (i=3; i<6; i++) {
-		if (servo_state[i] & 0x10) {
+		if ((servo_state[i] & 0x10) > 0) {
 			servo_set_enable_one(i, false);
 		} else {
 			servo_set_enable_one(i, true);
