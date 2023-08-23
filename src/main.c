@@ -81,10 +81,7 @@ __attribute__((used, section(".fwattr"))) struct {
 bool initialized = false;
 uint8_t _init_counter = 0;
 bool _init_counter_flag = false;
-uint8_t _init_counter2 = 0;
-bool _init_counter2_flag = false;
 #define INIT_TIME 50 // 500 ms
-#define INIT2_TIME 50 // 500 ms after
 
 #define MTBBUS_TIMEOUT_MAX 100 // 1 s
 uint8_t mtbbus_timeout = MTBBUS_TIMEOUT_MAX; // increment each 10 ms
@@ -118,11 +115,6 @@ static void handle_flags(void) {
 	if (_init_counter_flag == true) {
 		_init_counter_flag = false;
 		on_initialized(); // set leds
-	}
-
-	if (_init_counter2_flag == true) {
-		_init_counter2_flag = false;
-		init_post();	// init servo positions
 	}
 
 	if (scom_to_update) {
@@ -159,12 +151,6 @@ static void handle_timers(void) {
 		_init_counter++;
 		if (_init_counter == INIT_TIME)
 			_init_counter_flag = true;
-	} else {
-		if (_init_counter2 < INIT2_TIME) {
-			_init_counter2++;
-			if (_init_counter2 == INIT2_TIME)
-				_init_counter2_flag = true;
-		}
 	}
 
 	if (mtbbus_timeout < MTBBUS_TIMEOUT_MAX)
@@ -265,16 +251,6 @@ void init(void) {
 	sei(); // enable interrupts globally
 }
 
-static void init_post(void) {
-	uint8_t i;
-	uint8_t inp;
-	for(i=0; i < NO_SERVOS; i++) {
-		inp = (inputs_logic_state >> (i*2)) & 3; // extract input state
-		servo_init_position(i, (inp == 2)); // pos 2 -> servopos 2, else use servopos 1
-	}
-	PORTB |= (1 << PB4); // servo power enable
-}
-
 static inline void soft_reset() {
 	__asm__ volatile ("ijmp" ::"z" (0));
 }
@@ -288,6 +264,13 @@ static void on_initialized(void) {
 	io_led_red_off();
 	io_led_green_off();
 	io_led_blue_off();
+	uint8_t i;
+	uint8_t inp;
+	for(i=0; i < NO_SERVOS; i++) {
+		inp = (inputs_logic_state >> (i*2)) & 3; // extract input state
+		servo_init_position(i, (inp == 2)); // pos 2 -> servopos 2, else use servopos 1
+	}
+	PORTB |= (1 << PB4); // servo power enable
 	initialized = true;
 }
 

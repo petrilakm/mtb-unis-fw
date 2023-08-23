@@ -82,7 +82,6 @@ uint8_t servo_get_config_speed(uint8_t num) {
 
 
 void servo_init(void) {
-	uint8_t servo;
 	// timers inicialized in main
 	PORTB &= ~(1 << PB4); // servo power disable
 	PORTE |= (1 << PE3); // default output for servo is L
@@ -91,9 +90,6 @@ void servo_init(void) {
 	PORTB |= (1 << PE5);
 	PORTB |= (1 << PE6);
 	PORTB |= (1 << PE7);
-	for (servo = 0; servo < NO_SERVOS; servo++) {
-		servo_pos[servo] = servo_get_config_position(servo, 1);
-	}
 	servo_enabled = 0; // all disable, first determine last position, then enable
 }
 
@@ -109,7 +105,7 @@ void servo_init_position(uint8_t servo, bool state) {
 		// load position to RAM
 		servo_pos[servo] = servo_get_config_position(servo, statenum);
 		// generate signal now
-		servo_timeout[servo] = 200; // pulses after init => 2 s
+		servo_timeout[servo] = 100; // pulses after init => 2 s
 		// enable servo
 		servo_enabled |= (1 << servo);
 		servo_set_raw(servo, servo_pos[servo]);
