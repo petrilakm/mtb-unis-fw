@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <string.h>
 
 #include "mtbbus.h"
 #include "../src/io.h"
@@ -24,6 +25,8 @@ volatile uint8_t mtbbus_speed;
 void (*mtbbus_on_receive)(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len) = NULL;
 void (*mtbbus_on_sent)() = NULL;
 
+volatile MtbBusDiag mtbbus_diag;
+
 ///////////////////////////////////////////////////////////////////////////////
 
 static void _send_next_byte();
@@ -36,6 +39,7 @@ static inline void _mtbbus_received_non_ninth(uint8_t data);
 
 void mtbbus_init(uint8_t addr, uint8_t speed) {
 	mtbbus_addr = addr;
+	memset((void*)&mtbbus_diag, 0, sizeof(mtbbus_diag));
 
 	DDRE |= 0x04; // UART direction
 	uart_in();
@@ -137,6 +141,7 @@ static inline void _mtbbus_send_buf() {
 
 	while (!(UCSR0A & _BV(UDRE0)));
 	_send_next_byte();
+	mtbbus_diag.sent++;
 }
 
 static void _send_next_byte() {
@@ -205,8 +210,12 @@ static inline void _mtbbus_received_non_ninth(uint8_t data) {
 	if (mtbbus_input_buf_size >= mtbbus_input_buf[0]+3) {
 		// whole message received
 		uint16_t msg_crc = (mtbbus_input_buf[mtbbus_input_buf_size-1] << 8) | (mtbbus_input_buf[mtbbus_input_buf_size-2]);
-		if (received_crc == msg_crc)
+		if (received_crc == msg_crc) {
 			received = true;
+			mtbbus_diag.received++;
+		} else {
+			mtbbus_diag.bad_crc++;
+		}
 
 		receiving = false;
 		received_crc = 0;
