@@ -13,4 +13,6 @@ static inline uint8_t bit_reverse(uint8_t x) {
 	return x;
 }
 
+#define MEMCPY_FROM_VAR(target, source) { memcpy(target, (void*)&source, sizeof(source)); }
+
 #endif

@@ -546,11 +546,8 @@ void send_diag_value(uint8_t i) {
 		break;
 
 	case MTBBUS_DV_UPTIME:
-		mtbbus_output_buf[0] = 2+4;
-		mtbbus_output_buf[3] = (uptime_seconds >> 24);
-		mtbbus_output_buf[4] = (uptime_seconds >> 16) & 0xFF;
-		mtbbus_output_buf[5] = (uptime_seconds >> 8) & 0xFF;
-		mtbbus_output_buf[6] = (uptime_seconds) & 0xFF;
+		mtbbus_output_buf[0] = 2+sizeof(uptime_seconds);
+		MEMCPY_FROM_VAR(&mtbbus_output_buf[3], uptime_seconds);
 		break;
 
 	case MTBBUS_DV_WARNINGS:
