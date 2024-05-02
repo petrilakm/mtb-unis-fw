@@ -9,7 +9,7 @@
 #include "io.h"
 
 extern uint8_t config_safe_state[NO_OUTPUTS];
-extern uint8_t config_inputs_delay[NO_OUTPUTS/2];
+extern uint8_t config_inputs_delay[NO_INPUTS/2];
 extern bool config_write;
 extern uint8_t config_mtbbus_speed;
 

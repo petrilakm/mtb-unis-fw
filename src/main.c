@@ -357,7 +357,7 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 		if ((data_len >= 24) && (!broadcast)) {
 			mtbbus_send_ack();
 			memcpy((uint8_t*)config_safe_state, data, NO_OUTPUTS);
-			memcpy((uint8_t*)config_inputs_delay, data+NO_OUTPUTS, NO_OUTPUTS/2);
+			memcpy((uint8_t*)config_inputs_delay, data+NO_OUTPUTS, NO_INPUTS/2);
 			config_write = true;
 		} else { goto INVALID_MSG; }
 		break;
@@ -367,7 +367,7 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 			mtbbus_output_buf[0] = 25;
 			mtbbus_output_buf[1] = MTBBUS_CMD_MISO_MODULE_CONFIG;
 			memcpy((uint8_t*)mtbbus_output_buf+2, config_safe_state, NO_OUTPUTS);
-			memcpy((uint8_t*)mtbbus_output_buf+2+NO_OUTPUTS, config_inputs_delay, NO_OUTPUTS/2);
+			memcpy((uint8_t*)mtbbus_output_buf+2+NO_OUTPUTS, config_inputs_delay, NO_INPUTS/2);
 			mtbbus_send_buf_autolen();
 		} else { goto INVALID_MSG; }
 		break;

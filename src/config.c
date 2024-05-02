@@ -4,7 +4,7 @@
 #include "../lib/mtbbus.h"
 
 uint8_t config_safe_state[NO_OUTPUTS];
-uint8_t config_inputs_delay[NO_OUTPUTS/2];
+uint8_t config_inputs_delay[NO_INPUTS/2];
 bool config_write = false;
 uint8_t config_mtbbus_speed;
 
@@ -24,7 +24,7 @@ void config_load(void) {
 		// default EEPROM content → reset config
 		config_mtbbus_speed = MTBBUS_SPEED_38400;
 		memset(config_safe_state, 0, NO_OUTPUTS);
-		memset(config_inputs_delay, 0, NO_OUTPUTS/2);
+		memset(config_inputs_delay, 0, NO_INPUTS/2);
 		config_save();
 		return;
 	}
@@ -38,14 +38,14 @@ void config_load(void) {
 		eeprom_write_byte(EEPROM_ADDR_BOOT, CONFIG_BOOT_NORMAL);
 
 	eeprom_read_block(config_safe_state, EEPROM_ADDR_SAFE_STATE, NO_OUTPUTS);
-	eeprom_read_block(config_inputs_delay, EEPROM_ADDR_INPUTS_DELAY, NO_OUTPUTS/2);
+	eeprom_read_block(config_inputs_delay, EEPROM_ADDR_INPUTS_DELAY, NO_INPUTS/2);
 }
 
 void config_save(void) {
 	eeprom_update_byte(EEPROM_ADDR_VERSION, 1);
 	eeprom_update_byte(EEPROM_ADDR_MTBBUS_SPEED, config_mtbbus_speed);
 	eeprom_update_block(config_safe_state, EEPROM_ADDR_SAFE_STATE, NO_OUTPUTS);
-	eeprom_update_block(config_inputs_delay, EEPROM_ADDR_INPUTS_DELAY, NO_OUTPUTS/2);
+	eeprom_update_block(config_inputs_delay, EEPROM_ADDR_INPUTS_DELAY, NO_INPUTS/2);
 }
 
 uint8_t input_delay(uint8_t input) {
