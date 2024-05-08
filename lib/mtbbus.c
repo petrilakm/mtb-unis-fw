@@ -34,12 +34,23 @@ static inline void _mtbbus_send_buf();
 static inline void _mtbbus_received_ninth(uint8_t data);
 static inline void _mtbbus_received_non_ninth(uint8_t data);
 
+static inline bool _t0_elapsed();
+static inline void _t0_start();
+
 ///////////////////////////////////////////////////////////////////////////////
 // Init
 
 void mtbbus_init(uint8_t addr, uint8_t speed) {
 	mtbbus_addr = addr;
 	memset((void*)&mtbbus_diag, 0, sizeof(mtbbus_diag));
+
+	// Setup timer 0 @ 150 us (6666 Hz - MTBbus answer timeout)
+	// This timer is used to check that a response is sent withing 150 us after
+	// receiving the request. All requests to send messages after 150 us are discarded.
+	// See mtbbus protocol specification.
+	// No interrupt vector used - just start the timer & check for overflow
+	TCCR0 = (1 << CS01) | (1 << CS00); // prescaler 32
+	OCR0 = 69;
 
 	DDRE |= 0x04; // UART direction
 	uart_in();
@@ -51,6 +62,14 @@ void mtbbus_init(uint8_t addr, uint8_t speed) {
 	UCSR0B = _BV(RXCIE0) | _BV(TXCIE0) | _BV(UCSZ02) | _BV(RXEN0) | _BV(TXEN0);  // RX, TX enable; RX, TX interrupt enable
 }
 
+bool _t0_elapsed() {
+	return (TIFR & (1 << OCF0));
+}
+
+void _t0_start() {
+	TCNT0 = 0;
+	TIFR = (1 << OCF0);
+}
 
 void mtbbus_set_speed(uint8_t speed) {
 	mtbbus_speed = speed;
@@ -129,9 +148,10 @@ int mtbbus_send_buf_autolen() {
 		return 1;
 	if (mtbbus_output_buf[0] > MTBBUS_OUTPUT_BUF_MAX_SIZE_USER)
 		return 2;
+	if (_t0_elapsed())
+		return 3;
 	mtbbus_output_buf_size = mtbbus_output_buf[0]+1;
-	mtbbus_send_buf();
-	return 0;
+	return mtbbus_send_buf();
 }
 
 static inline void _mtbbus_send_buf() {
@@ -212,6 +232,7 @@ static inline void _mtbbus_received_non_ninth(uint8_t data) {
 		uint16_t msg_crc = (mtbbus_input_buf[mtbbus_input_buf_size-1] << 8) | (mtbbus_input_buf[mtbbus_input_buf_size-2]);
 		if (received_crc == msg_crc) {
 			received = true;
+			_t0_start();
 			mtbbus_diag.received++;
 		} else {
 			mtbbus_diag.bad_crc++;

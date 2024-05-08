@@ -160,7 +160,7 @@ void init(void) {
 	io_led_blue_on();
 	scom_init();
 
-	// Setup timer 1 @ 10 kHz (period 100 us)
+	// Setup timer 1 @ 2 kHz (period 500 us)
 	TCCR1B = (1 << WGM12) | (1 << CS10); // CTC mode, no prescaler
 	TIMSK = (1 << OCIE1A); // enable compare match interrupt
 	OCR1A = 7365;
