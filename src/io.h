@@ -68,6 +68,10 @@
 #define PIN_UART_TX PE1
 #define PIN_UART_DIR PE2
 
+// Test/debug pins
+#define PIN_TPMISO PB3
+#define PIN_TPMOSI PB2
+
 #define PIN_BUTTON PING4
 
 void io_init();
@@ -126,5 +130,33 @@ static inline bool io_button(void) { return (PING >> PIN_BUTTON) & 0x1; }
 
 static inline void uart_out(void) { PORTE |= (1 << PIN_UART_DIR); }
 static inline void uart_in(void) { PORTE &= ~(1 << PIN_UART_DIR); }
+
+static inline void io_tpmiso(bool state) {
+	if (state)
+		PORTB |= (1 << PIN_TPMISO);
+	else
+		PORTB &= ~(1 << PIN_TPMISO);
+}
+
+static inline void io_tpmiso_toggle(void) {
+	if (PORTB & (1 << PIN_TPMISO))
+		PORTB &= ~(1 << PIN_TPMISO);
+	else
+		PORTB |= (1 << PIN_TPMISO);
+}
+
+static inline void io_tpmosi(bool state) {
+	if (state)
+		PORTB |= (1 << PIN_TPMOSI);
+	else
+		PORTB &= ~(1 << PIN_TPMOSI);
+}
+
+static inline void io_tpmosi_toggle(void) {
+	if (PORTB & (1 << PIN_TPMOSI))
+		PORTB &= ~(1 << PIN_TPMOSI);
+	else
+		PORTB |= (1 << PIN_TPMOSI);
+}
 
 #endif

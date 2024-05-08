@@ -7,7 +7,7 @@
 void io_init() {
 	DDRD = 0xFF; // outputs 7-0
 	DDRC = 0xFF; // outputs 15-8
-	DDRB = (1 << PIN_LED_RED) | (1 << PIN_LED_GREEN);
+	DDRB = (1 << PIN_LED_RED) | (1 << PIN_LED_GREEN) | (1 << PIN_TPMISO) | (1 << PIN_TPMOSI);
 	DDRG = (1 << PIN_LED_BLUE);
 	PORTG = (1 << PIN_BUTTON); // button pull-up
 	PORTE = (1 << PIN_UART_RX); // RX pull-up
