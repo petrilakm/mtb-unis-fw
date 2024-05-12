@@ -6,10 +6,20 @@
 #include <avr/eeprom.h>
 #include <avr/boot.h>
 #include <avr/pgmspace.h>
+#include <util/atomic.h>
 
 #include "io.h"
 #include "../lib/crc16modbus.h"
 #include "../lib/mtbbus.h"
+
+/* All boot_* functions executing SPM instruction need to be called in
+ * ATOMIC_BLOCK - interrupts need to be disabled during execution of the function,
+ * because the following needs to be met [ATmega128A datasheet]:
+ * "To execute page erase, ... write “X0000011” to SPMCSR and execute SPM
+ * **within four clock cycles** after writing SPMCSR."
+ * This is a real issue in MTB-UNI-2-AVR with baudrate 230 400 bd/s - random
+ * words in flash were not programmed after an attempt to reprogram the flash.
+ */
 
 ///////////////////////////////////////////////////////////////////////////////
 // Function prototypes
@@ -99,7 +109,9 @@ int main() {
 		if (page_erase) {
 			while (boot_spm_busy())
 				mtbbus_update();
-			boot_page_erase(SPM_PAGESIZE*page);
+			ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+				boot_page_erase(SPM_PAGESIZE*page);
+			}
 			while (boot_spm_busy())
 				mtbbus_update();
 			page_erase = false;
@@ -108,7 +120,9 @@ int main() {
 		if (page_write) {
 			while (boot_spm_busy())
 				mtbbus_update();
-			boot_page_write(SPM_PAGESIZE*page);
+			ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+				boot_page_write(SPM_PAGESIZE*page);
+			}
 			while (boot_spm_busy())
 				mtbbus_update();
 			page_write = false;
@@ -150,7 +164,9 @@ static inline void main_program(void) {
 ///////////////////////////////////////////////////////////////////////////////
 
 bool fwcrc_ok(void) {
-	boot_rww_enable_safe();
+	ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+		boot_rww_enable_safe();
+	}
 	uint8_t no_pages = pgm_read_byte_far(&fwattr.no_pages);
 	uint16_t crc_read = pgm_read_word_far(&fwattr.crc);
 
@@ -211,9 +227,11 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 		}
 		subpage = _subpage;
 
-		for (size_t i = 0; i < 64; i += 2) {
-			uint16_t word = data[i+2] | (data[i+3] << 8);
-			boot_page_fill(SPM_PAGESIZE*page + _subpage + i, word);
+		ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+			for (size_t i = 0; i < 64; i += 2) {
+				uint16_t word = data[i+2] | (data[i+3] << 8);
+				boot_page_fill(SPM_PAGESIZE*page + _subpage + i, word);
+			}
 		}
 
 		if (_subpage == SPM_PAGESIZE-64) {
