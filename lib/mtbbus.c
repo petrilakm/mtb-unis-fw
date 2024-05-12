@@ -25,7 +25,9 @@ volatile uint8_t mtbbus_speed;
 void (*mtbbus_on_receive)(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len) = NULL;
 void (*mtbbus_on_sent)() = NULL;
 
+#ifdef SUP_MTBBUS_DIAG
 volatile MtbBusDiag mtbbus_diag;
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -42,7 +44,10 @@ static inline void _t0_start();
 
 void mtbbus_init(uint8_t addr, uint8_t speed) {
 	mtbbus_addr = addr;
+
+#ifdef SUP_MTBBUS_DIAG
 	memset((void*)&mtbbus_diag, 0, sizeof(mtbbus_diag));
+#endif
 
 	// Setup timer 0 @ 150 us (6666 Hz - MTBbus answer timeout)
 	// This timer is used to check that a response is sent withing 150 us after
@@ -161,7 +166,10 @@ static inline void _mtbbus_send_buf() {
 
 	while (!(UCSR0A & _BV(UDRE0)));
 	_send_next_byte();
+
+#ifdef SUP_MTBBUS_DIAG
 	mtbbus_diag.sent++;
+#endif
 }
 
 static void _send_next_byte() {
@@ -233,9 +241,11 @@ static inline void _mtbbus_received_non_ninth(uint8_t data) {
 		if (received_crc == msg_crc) {
 			received = true;
 			_t0_start();
+#ifdef SUP_MTBBUS_DIAG
 			mtbbus_diag.received++;
 		} else {
 			mtbbus_diag.bad_crc++;
+#endif
 		}
 
 		receiving = false;
