@@ -84,7 +84,7 @@ int mtbbus_send_buf();
 #define MTBBUS_DV_TEMPMCU 13
 #define MTBBUS_DV_MTBBUS_RECEIVED 16
 #define MTBBUS_DV_MTBBUS_BAD_CRC 17
-#define MTBBUS_DV_MTBUS_SENT 18
+#define MTBBUS_DV_MTBBUS_SENT 18
 
 #ifdef SUP_MTBBUS_DIAG
 typedef struct {
