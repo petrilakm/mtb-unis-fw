@@ -121,10 +121,18 @@ void mtbbus_update() {
 // Sending
 
 int mtbbus_send(uint8_t *data, uint8_t size) {
-	if (!mtbbus_can_fill_output_buf())
+	if (!mtbbus_can_fill_output_buf()) {
+#ifdef SUP_MTBBUS_DIAG
+		mtbbus_diag.unsent++;
+#endif
 		return 1;
-	if (size > MTBBUS_OUTPUT_BUF_MAX_SIZE_USER)
+	}
+	if (size > MTBBUS_OUTPUT_BUF_MAX_SIZE_USER) {
+#ifdef SUP_MTBBUS_DIAG
+		mtbbus_diag.unsent++;
+#endif
 		return 2;
+	}
 
 	for (uint8_t i = 0; i < size; i++)
 		mtbbus_output_buf[i] = data[i];
@@ -135,8 +143,12 @@ int mtbbus_send(uint8_t *data, uint8_t size) {
 }
 
 int mtbbus_send_buf() {
-	if (sending)
+	if (sending) {
+#ifdef SUP_MTBBUS_DIAG
+		mtbbus_diag.unsent++;
+#endif
 		return 1;
+	}
 	sent = false;
 
 	size_t i = mtbbus_output_buf_size;
@@ -149,12 +161,24 @@ int mtbbus_send_buf() {
 }
 
 int mtbbus_send_buf_autolen() {
-	if (sending)
+	if (sending) {
+#ifdef SUP_MTBBUS_DIAG
+		mtbbus_diag.unsent++;
+#endif
 		return 1;
-	if (mtbbus_output_buf[0] > MTBBUS_OUTPUT_BUF_MAX_SIZE_USER)
+	}
+	if (mtbbus_output_buf[0] > MTBBUS_OUTPUT_BUF_MAX_SIZE_USER) {
+#ifdef SUP_MTBBUS_DIAG
+		mtbbus_diag.unsent++;
+#endif
 		return 2;
-	if (_t0_elapsed())
+	}
+	if (_t0_elapsed()) {
+#ifdef SUP_MTBBUS_DIAG
+		mtbbus_diag.unsent++;
+#endif
 		return 3;
+	}
 	mtbbus_output_buf_size = mtbbus_output_buf[0]+1;
 	return mtbbus_send_buf();
 }
