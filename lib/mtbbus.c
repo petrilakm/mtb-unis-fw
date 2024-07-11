@@ -34,6 +34,14 @@ static inline void _mtbbus_send_buf();
 static inline void _mtbbus_received_ninth(uint8_t data);
 static inline void _mtbbus_received_non_ninth(uint8_t data);
 
+void mtb_dbg_send()
+{
+	mtbbus_output_buf_size = 2;
+	mtbbus_output_buf[0] = 0x55;
+	mtbbus_output_buf[1] = 0x55;
+	_mtbbus_send_buf();
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Init
 

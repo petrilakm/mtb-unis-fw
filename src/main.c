@@ -24,7 +24,6 @@
 
 int main();
 static void init(void);
-static void init_post(void);
 void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len); // intentionally not static
 static void mtbbus_send_ack(void);
 static void mtbbus_send_inputs(uint8_t message_code);
@@ -52,15 +51,17 @@ static void handle_timers(void);
 ///////////////////////////////////////////////////////////////////////////////
 // Defines & global variables
 
+#define LED_RED_ON 5
+
 #define LED_GR_ON 5
 #define LED_GR_OFF 2
-uint8_t led_gr_counter = 0;
+uint8_t led_green_counter = 0;
+uint8_t led_red_counter = 0;
 
-#define LED_RED_OK_ON 40
-#define LED_RED_OK_OFF 20
+#define LED_RED_OK_ON 5
+#define LED_RED_OK_OFF 2
 #define LED_RED_ERR_ON 100
 #define LED_RED_ERR_OFF 50
-uint8_t led_red_counter = 0;
 
 bool beacon = false;
 
@@ -196,10 +197,9 @@ void init(void) {
 	mcucsr.bits.borf = false; // brownout detects basically all power-on resets
 	mtbbus_warn_flags.all = (mcucsr.all >> 1) & 0x0F;
 
-        uart_in();
+	uart_in();
 	io_init();
 	io_led_red_on();
-	io_led_blue_on();
 	scom_init();
 
 	// Setup timer 0 @ 100 Hz (period 10 ms)
@@ -270,7 +270,11 @@ static void on_initialized(void) {
 		inp = (inputs_logic_state >> (i*2)) & 3; // extract input state
 		servo_init_position(i, (inp == 2)); // pos 2 -> servopos 2, else use servopos 1
 	}
-	PORTB |= (1 << PB4); // servo power enable
+    if (servo_enabled > 0) {
+      // if some servo is enabled
+      PORTB |= (1 << PB4); // servo power enable
+    }
+
 	initialized = true;
 }
 
@@ -318,9 +322,9 @@ ISR(TIMER3_CAPT_vect) {
 ///////////////////////////////////////////////////////////////////////////////
 
 void leds_update(void) {
-	if (led_gr_counter > 0) {
-		led_gr_counter--;
-		if (led_gr_counter == LED_GR_OFF)
+	if (led_green_counter > 0) {
+		led_green_counter--;
+		if (led_green_counter == LED_GR_OFF)
 			io_led_green_off();
 	}
 
@@ -398,12 +402,12 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 		return;
 
 	error_flags.bits.bad_mtbbus_polarity = false;
-	if (led_gr_counter == 0) {
+	if (led_green_counter == 0) {
 		io_led_green_on();
-		led_gr_counter = LED_GR_ON;
+		led_green_counter = LED_GR_ON;
 	}
 	if ((!broadcast) && (command_code != MTBBUS_CMD_MOSI_MODULE_INQUIRY)) {
-		led_blue_ok();
+		led_red_ok();
 	}
 	_delay_us(2);
 
@@ -426,6 +430,7 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 				first_scan = false;
 				mtbbus_send_inputs(MTBBUS_CMD_MISO_INPUT_CHANGED);
 				inputs_old = inputs_logic_state;
+				led_red_ok();
 			} else {
 				last_input_changed = false;
 

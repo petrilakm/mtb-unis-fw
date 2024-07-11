@@ -28,6 +28,8 @@ extern volatile uint8_t mtbbus_speed;
 extern void (*mtbbus_on_receive)(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len);
 extern void (*mtbbus_on_sent)();
 
+void mtb_dbg_send();
+
 typedef enum {
 	MTBBUS_SPEED_38400 = 1,
 	MTBBUS_SPEED_57600 = 2,

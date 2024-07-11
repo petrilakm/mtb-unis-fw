@@ -23,9 +23,9 @@ extern volatile uint8_t dbg;
 #define NO_SERVO_OUTPUTS (NO_SERVOS*2)
 #define NO_OUTPUTS_ALL (NO_OUTPUTS+NO_SERVO_OUTPUTS)
 
-#define PIN_LED_RED PG0
-//#define PIN_LED_GREEN PB6
-#define PIN_LED_BLUE PG3
+#define PIN_LED_GREEN PG0
+#define PIN_LED_RED PG3
+#define PIN_LED_BLUE PG4
 
 #define PIN_UART_RX PE0
 #define PIN_UART_TX PE1
@@ -47,12 +47,12 @@ bool io_get_output_raw(uint8_t onum);
 extern volatile uint16_t output_shadow;
 extern uint16_t output_virt;
 
-static inline void io_led_green_off() { PORTG |= (1 << PIN_LED_RED); }
-static inline void io_led_green_on() { PORTG &= ~(1 << PIN_LED_RED); }
-static inline void io_led_red_on() { }
-static inline void io_led_red_off() { }
-static inline void io_led_blue_off() { PORTG |= (1 << PIN_LED_BLUE); }
-static inline void io_led_blue_on() { PORTG &= ~(1 << PIN_LED_BLUE); }
+static inline void io_led_green_on() { PORTG |= (1 << PIN_LED_GREEN); }
+static inline void io_led_green_off() { PORTG &= ~(1 << PIN_LED_GREEN); }
+static inline void io_led_red_on() { PORTG |= (1 << PIN_LED_RED); }
+static inline void io_led_red_off() { PORTG &= ~(1 << PIN_LED_RED); }
+static inline void io_led_blue_on() { PORTG |= (1 << PIN_LED_BLUE); }
+static inline void io_led_blue_off() { PORTG &= ~(1 << PIN_LED_BLUE); }
 
 static inline void io_led_red(bool state) {
 	if (state)
@@ -76,7 +76,7 @@ static inline void io_led_blue(bool state) {
 }
 
 static inline bool io_led_red_state() { return !((PORTG >> PIN_LED_RED) & 0x1); }
-static inline bool io_led_green_state() { return 0; }
+static inline bool io_led_green_state() { return !((PORTG >> PIN_LED_GREEN) & 0x1); }
 static inline bool io_led_blue_state() { return !((PORTG >> PIN_LED_BLUE) & 0x1); }
 
 static inline void io_led_red_toggle(void) { io_led_red(!io_led_red_state()); }
