@@ -245,6 +245,8 @@ static inline void _mtbbus_received_ninth(uint8_t data) {
 		receiving = true;
 		mtbbus_input_buf_size = 0;
 		received_crc = crc16modbus_byte(0, received_addr);
+	} else {
+		receiving = false;
 	}
 }
 
