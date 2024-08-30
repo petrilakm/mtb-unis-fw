@@ -5,6 +5,9 @@ int8_t _codes[NO_OUTPUTS]; // -1 = not coding anything
 int8_t _codes_new[NO_OUTPUTS];
 uint8_t _phase = 0;
 
+uint8_t _sync_counter;
+#define SCOM_SYNC_COUNTER (30)
+
 #define SCOM_PHASE_STARTBIT1 0
 #define SCOM_PHASE_STARTBIT0 1
 #define SCOM_PHASE_BIT0      2
@@ -20,13 +23,21 @@ void scom_update(void) {
 	uint16_t outputs = 0;
 	uint16_t mask = 0;
 
+	// send periodic sync code to s-com output
+	_sync_counter++;
+	if (_sync_counter >= SCOM_SYNC_COUNTER) {
+		_sync_counter=0;
+	}
+
 	if (_phase <= SCOM_PHASE_STOPBIT+1) {
 		for (int i = NO_OUTPUTS-1; i >= 0; i--) {
 			outputs <<= 1;
 			mask <<= 1;
 
-			if (_codes[i] > -1)
+			if (_codes[i] > -1) {
 				mask |= 1;
+				if (_sync_counter == 0) _codes[i] = 0b01111111;
+			}
 
 			if (_phase == SCOM_PHASE_STARTBIT1 || _phase == SCOM_PHASE_STOPBIT) {
 				outputs |= 1;
