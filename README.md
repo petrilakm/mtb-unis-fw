@@ -1,4 +1,4 @@
-# MTB-UNI v4 Firmware
+# MTB-UNIS Firmware
 
 This repository contains firmware for ATmega128 MCU for
 [MTB-UNI v4 module](https://mtb.kmz-brno.cz/uni). Firmware consists of main

@@ -36,4 +36,7 @@ obj
 *.dep
 *.swp
 
-pspad.ppr
+Word tmp files
+~$*.docx
+
+*.ppr

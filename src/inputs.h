@@ -12,9 +12,9 @@
 extern uint16_t inputs_logic_state;
 extern uint16_t inputs_debounced_state;
 
-extern bool btn_pressed;
-void btn_on_pressed(void);
-void btn_on_depressed(void);
+extern bool btn_pressed; // button state after debounce
+extern bool io_button_short_pressed; // turn high after short press, handle in main program
+extern bool io_button_long_pressed; // turn high after long press, handle in main program
 
 // You may use this variable for any purpose, this unit does not work with it.
 extern uint16_t inputs_old;
