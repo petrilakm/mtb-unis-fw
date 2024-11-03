@@ -6,6 +6,7 @@
 #include "io.h"
 volatile uint16_t output_shadow = 0;
 uint16_t output_virt = 0;
+uint8_t output_analog[8];
 
 volatile uint8_t dbg = 0;
 

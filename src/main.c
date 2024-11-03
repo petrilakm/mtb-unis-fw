@@ -235,20 +235,20 @@ void init(void) {
   TCCR1A = 0;
   TCCR1B = (1 << WGM13); // phase & freq. corrent PWM, stop
   TCNT1 = 0;
-  OCR1A = 1375;
-  OCR1B = 1375;
-  OCR1C = 1375;
-  ICR1 = 18432;
+  OCR1A = 10;
+  OCR1B = 10;
+  OCR1C = 10;
+  ICR1 = 10000;
   TIMSK |= (1 << TICIE1); // overflow on top
   TCCR1B |= 2; // 8× prescaller, run
 
   TCCR3A = 0;
   TCCR3B = (1 << WGM33); // phase & freq. corrent PWM, stop
   TCNT3 = 0;
-  OCR3A = 1375;
-  OCR3B = 1375;
-  OCR3C = 1375;
-  ICR3 = 18432;
+  OCR3A = 10;
+  OCR3B = 10;
+  OCR3C = 10;
+  ICR3 = 10000;
   ETIMSK |= (1 << TICIE3);
   TCCR3B |= 2; // 8× prescaller, run
 
@@ -313,6 +313,7 @@ ISR(TIMER3_COMPA_vect) {
 
 // enable disable servo signals on demand (and in right time)
 ISR(TIMER1_CAPT_vect) {
+  /*
   uint8_t i;
   for (i=0; i<3; i++) {
     if ((servo_state[i] & 0x10) > 0) {
@@ -321,8 +322,10 @@ ISR(TIMER1_CAPT_vect) {
       servo_set_enable_one(i, true);
     }
   }
+  */
 }
 ISR(TIMER3_CAPT_vect) {
+  /*
   uint8_t i;
   for (i=3; i<6; i++) {
     if ((servo_state[i] & 0x10) > 0) {
@@ -331,6 +334,7 @@ ISR(TIMER3_CAPT_vect) {
       servo_set_enable_one(i, true);
     }
   }
+  */
 }
 ///////////////////////////////////////////////////////////////////////////////
 

@@ -46,6 +46,7 @@ bool io_get_output_raw(uint8_t onum);
 
 extern volatile uint16_t output_shadow;
 extern uint16_t output_virt;
+extern uint8_t output_analog[8];
 
 //static inline bool io_led_red_state() { return !((PORTG >> PIN_LED_RED) & 0x1); }
 //static inline bool io_led_green_state() { return 0; }

@@ -68,6 +68,8 @@ void outputs_set_zipped(uint8_t data[], size_t length) {
 	}
 
 	output_virt = data[3] | (data[2] << 8);
+	output_analog[0] = output_virt & 0x3f;
+	output_analog[1] = (output_virt >> 6) & 0x3f;
 }
 
 void outputs_set_full(uint8_t data[NO_OUTPUTS]) {

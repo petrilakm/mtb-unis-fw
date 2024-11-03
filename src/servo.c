@@ -1,7 +1,7 @@
 #include <stdbool.h>
 #include "servo.h"
 
-uint16_t servo_pos[NO_SERVOS] = {4000,}; // actual servo position
+uint16_t servo_pos[NO_SERVOS] = {0,}; // actual servo position
 // state + 4bit=no pulse state 000s 00pp
 // 0000 0010 - servo end in position 2
 // 0001 0001 - servo stopped in position 1
@@ -18,7 +18,7 @@ uint16_t servo_test_pos_last = 0;
 uint16_t servo_test_timeout = 0;
 
 void servo_set_raw(uint8_t num, uint16_t pos) {
-	pos = pos >> 2;
+	//pos = pos >> 2;
 	switch (num) {
 		case 0:
 			OCR1C = pos;
@@ -84,12 +84,12 @@ uint8_t servo_get_config_speed(uint8_t num) {
 void servo_init(void) {
 	// timers inicialized in main
 	PORTB &= ~(1 << PB4); // servo power disable
-	PORTE |= (1 << PE3); // default output for servo is L
-	PORTE |= (1 << PE4);
-	PORTE |= (1 << PE5);
-	PORTB |= (1 << PE5);
-	PORTB |= (1 << PE6);
-	PORTB |= (1 << PE7);
+	PORTE &= ~(1 << PE3); // default analog output is open
+	PORTE &= ~(1 << PE4);
+	PORTE &= ~(1 << PE5);
+	PORTB &= ~(1 << PE5);
+	PORTB &= ~(1 << PE6);
+	PORTB &= ~(1 << PE7);
 	servo_enabled = 0; // all disable, first determine last position, then enable
 }
 
@@ -108,7 +108,9 @@ void servo_init_position(uint8_t servo, bool state) {
 		servo_timeout[servo] = 100; // pulses after init => 2 s
 		// enable servo
 		servo_enabled |= (1 << servo);
-		servo_set_raw(servo, servo_pos[servo]);
+		output_analog[servo] = 250;
+		servo_set_enable_one(servo, true);
+		servo_set_raw(servo, 2500);
 	} else {
 		// disable unused servo
 		servo_state[servo] |= 0x10;
@@ -119,9 +121,9 @@ void servo_update(void) {
 	static uint8_t postdiv2 = 2;
 	static uint8_t servo_cnt = 0;
 	uint8_t i;
-	uint8_t state = 0;
-	uint8_t speed = 0;
-	uint16_t pos_end = (100<<5);
+	//uint8_t state = 0;
+	//uint8_t speed = 0;
+	//uint16_t pos_end = (100<<5);
 
 	postdiv2--;
 	if (postdiv2 == 0) {
@@ -159,55 +161,16 @@ void servo_update(void) {
 		// for each servo
 		for(i=0; i<NO_SERVOS; i++) {
 			// only enabled servos
-			if (((servo_enabled >> i) & 1) > 0) {
-				state = servo_state[i];
-				if (i == servo_test_select) {
-					// servo in manual mode:
-					//set current position (controled in interupt via received commands)
-					pos_end = (servo_test_pos+SERVO_OFFSET_POS) << 5; // set manual position
-
-					// if manual position changed
-					if (servo_test_pos != servo_test_pos_last) {
-						servo_test_pos_last = servo_test_pos; // save last command
-						servo_state[i] &= ~0x10;  // enable servo signal
-						servo_timeout[i] = 0; // reset timeout for servo operation
-						servo_test_timeout = SERVO_TEST_TIMEOUT_MAX;  // reset timeout for manual positioning end
-					}
-				} else {
-					// normal operation
-					pos_end = servo_get_config_position(i, state & 0x03);
-				}
-				//state = servo_state[i];
-
-				// measure timeout for one servo signal
-				if (servo_timeout[i] > 0) {
-					servo_timeout[i]--;
-					if (servo_timeout[i] == 0) {
-						servo_state[i] |= 0x10;
-					}
-				}
-
-				if ((state < 8) && (servo_timeout[i] == 0)) {
-					speed = servo_get_config_speed(i);
-					int16_t diff = ( servo_pos[i] - pos_end);
-					int16_t absdiff = (diff > 0) ? diff : -diff;
-					if ((absdiff) < speed) {
-						// end position
-						servo_pos[i] = pos_end;
-						servo_timeout[i] = SERVO_TIMEOUT_MAX;
-					} else {
-						if (diff > 0) {
-							servo_pos[i] -= speed;
-						}
-						if (diff < 0) {
-							servo_pos[i] += speed;
-						}
-					}
-					servo_set_raw(i, servo_pos[i]);
-				}
-			} else {
-				servo_state[i] |= 16; // disable unused servo
-			}
+			//if (((servo_enabled >> i) & 1) > 0) {
+				// only 2 outputs
+				// set analog value directly to output
+				servo_set_raw(i, (output_analog[i] << 6));
+				//output_analog[5]++;
+				//if (output_analog[5] > 1000) output_analog[5] = 0;
+				servo_state[i] |= 0x10;
+			//} else {
+			//	servo_state[i] |= 16; // disable unused servo
+			//}
 		}
 	}
 }
@@ -217,7 +180,7 @@ void servo_set_enable_one(uint8_t servo, bool state)
 	switch (servo) {
 		case 0:
 			if (state) { // servo 1
-				TCCR1A |=  (1 << COM1C0);
+				TCCR1A &= ~(1 << COM1C0);
 				TCCR1A |=  (1 << COM1C1);
 			} else {
 				TCCR1A &= ~(1 << COM1C0);
@@ -227,12 +190,12 @@ void servo_set_enable_one(uint8_t servo, bool state)
 			break;
 		case 1:
 			if (state) { // servo 2
-				TCCR1A |=  (1 << COM1B0);
+				TCCR1A &= ~(1 << COM1B0);
 				TCCR1A |=  (1 << COM1B1);
 			} else {
 				TCCR1A &= ~(1 << COM1B0);
 				TCCR1A &= ~(1 << COM1B1);
-				PORTB |= (1 << PE6);
+				PORTB &= ~(1 << PE6);
 			}
 			break;
 		case 2:
