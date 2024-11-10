@@ -88,8 +88,49 @@ int main() {
     outputs_apply_state();
     handle_flags();
 
-    wdt_reset();
-  }
+		if (inputs_debounce_to_update) {
+			inputs_debounce_to_update = false;
+			inputs_debounce_update();
+		}
+
+		if (config_write) {
+			if (config_save()) // repeat calling until all data really saved
+				config_write = false;
+		}
+
+		if (btn_press_time == BTN_PRESS_1S) {
+			btn_press_time = 0xFF;
+			btn_long_press();
+		}
+
+		if ((mtbbus_auto_speed_in_progress) && (mtbbus_auto_speed_timer == MTBBUS_AUTO_SPEED_TIMEOUT))
+			mtbbus_auto_speed_next();
+
+		if (diag_timer >= DIAG_UPDATE_PERIOD) {
+			diag_timer = 0;
+			diag_update();
+		}
+
+		if (_init_counter == INIT_TIME) {
+			_init_counter = 0xFF;
+			on_initialized();
+		}
+
+		if (t3_elapsed) {
+			t3_elapsed = false;
+
+			outputs_update();
+			inputs_fall_update();
+			leds_update();
+
+			outputs_changed_when_setting_scom = false;
+			scom_update();
+			if (outputs_changed_when_setting_scom)
+				outputs_apply_state();
+		}
+
+		wdt_reset();
+	}
 }
 
 static void handle_flags(void) {
@@ -657,32 +698,49 @@ void send_diag_value(uint8_t i) {
     mtbbus_output_buf[3] = (mtbbus_warn_flags.all > 0) << 1;
     break;
 
-  case MTBBUS_DV_UPTIME:
-    mtbbus_output_buf[0] = 2+4;
-    mtbbus_output_buf[3] = (uptime_seconds >> 24);
-    mtbbus_output_buf[4] = (uptime_seconds >> 16) & 0xFF;
-    mtbbus_output_buf[5] = (uptime_seconds >> 8) & 0xFF;
-    mtbbus_output_buf[6] = (uptime_seconds) & 0xFF;
-    break;
+	case MTBBUS_DV_UPTIME:
+		mtbbus_output_buf[0] = 2+sizeof(uptime_seconds);
+		MEMCPY_FROM_VAR(&mtbbus_output_buf[3], uptime_seconds);
+		break;
 
-  case MTBBUS_DV_WARNINGS:
-    mtbbus_warn_flags_old = mtbbus_warn_flags;
-    mtbbus_output_buf[0] = 2+1;
-    mtbbus_output_buf[3] = mtbbus_warn_flags.all;
-    break;
+	case MTBBUS_DV_WARNINGS:
+		mtbbus_warn_flags_old = mtbbus_warn_flags;
+		mtbbus_output_buf[0] = 2+1;
+		mtbbus_output_buf[3] = mtbbus_warn_flags.all;
+		break;
 
-  case MTBBUS_DV_VMCU:
-    mtbbus_output_buf[0] = 2+2;
-    mtbbus_output_buf[3] = vcc_voltage >> 8;
-    mtbbus_output_buf[4] = vcc_voltage & 0xFF;
-    break;
+	case MTBBUS_DV_VMCU:
+		mtbbus_output_buf[0] = 2+2;
+		mtbbus_output_buf[3] = vcc_voltage >> 8;
+		mtbbus_output_buf[4] = vcc_voltage & 0xFF;
+		break;
 
-  default:
-    mtbbus_output_buf[0] = 2+0;
-    mtbbus_warn_flags_old = mtbbus_warn_flags;
-  }
+	case MTBBUS_DV_MTBBUS_RECEIVED:
+		mtbbus_output_buf[0] = 2+sizeof(mtbbus_diag.received);
+		MEMCPY_FROM_VAR(&mtbbus_output_buf[3], mtbbus_diag.received);
+		break;
 
-  mtbbus_send_buf_autolen();
+	case MTBBUS_DV_MTBBUS_BAD_CRC:
+		mtbbus_output_buf[0] = 2+sizeof(mtbbus_diag.bad_crc);
+		MEMCPY_FROM_VAR(&mtbbus_output_buf[3], mtbbus_diag.bad_crc);
+		break;
+
+	case MTBBUS_DV_MTBBUS_SENT:
+		mtbbus_output_buf[0] = 2+sizeof(mtbbus_diag.sent);
+		MEMCPY_FROM_VAR(&mtbbus_output_buf[3], mtbbus_diag.sent);
+		break;
+
+	case MTBBUS_DV_MTBBUS_UNSENT:
+		mtbbus_output_buf[0] = 2+sizeof(mtbbus_diag.unsent);
+		MEMCPY_FROM_VAR(&mtbbus_output_buf[3], mtbbus_diag.unsent);
+		break;
+
+	default:
+		mtbbus_output_buf[0] = 2+0;
+		mtbbus_warn_flags_old = mtbbus_warn_flags;
+	}
+
+	mtbbus_send_buf_autolen();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

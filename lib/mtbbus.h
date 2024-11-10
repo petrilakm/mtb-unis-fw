@@ -86,5 +86,20 @@ int mtbbus_send_buf();
 #define MTBBUS_DV_WARNINGS 11
 #define MTBBUS_DV_VMCU 12
 #define MTBBUS_DV_TEMPMCU 13
+#define MTBBUS_DV_MTBBUS_RECEIVED 16
+#define MTBBUS_DV_MTBBUS_BAD_CRC 17
+#define MTBBUS_DV_MTBBUS_SENT 18
+#define MTBBUS_DV_MTBBUS_UNSENT 19
+
+#ifdef SUP_MTBBUS_DIAG
+typedef struct {
+	uint32_t received;
+	uint32_t bad_crc;
+	uint32_t sent;
+	uint32_t unsent;
+} MtbBusDiag;
+
+extern volatile MtbBusDiag mtbbus_diag;
+#endif
 
 #endif

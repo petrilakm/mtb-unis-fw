@@ -2,6 +2,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
+#include <string.h>
 
 #include "mtbbus.h"
 #include "../src/io.h"
@@ -27,6 +28,10 @@ volatile uint8_t mtbbus_speed;
 void (*mtbbus_on_receive)(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len) = NULL;
 void (*mtbbus_on_sent)() = NULL;
 
+#ifdef SUP_MTBBUS_DIAG
+volatile MtbBusDiag mtbbus_diag;
+#endif
+
 ///////////////////////////////////////////////////////////////////////////////
 
 static void _send_next_byte();
@@ -34,11 +39,26 @@ static inline void _mtbbus_send_buf();
 static inline void _mtbbus_received_ninth(uint8_t data);
 static inline void _mtbbus_received_non_ninth(uint8_t data);
 
+static inline bool _t0_elapsed();
+static inline void _t0_start();
+
 ///////////////////////////////////////////////////////////////////////////////
 // Init
 
 void mtbbus_init(uint8_t addr, uint8_t speed) {
 	mtbbus_addr = addr;
+
+#ifdef SUP_MTBBUS_DIAG
+	memset((void*)&mtbbus_diag, 0, sizeof(mtbbus_diag));
+#endif
+
+	// Setup timer 0 @ 150 us (6666 Hz - MTBbus answer timeout)
+	// This timer is used to check that a response is sent withing 150 us after
+	// receiving the request. All requests to send messages after 150 us are discarded.
+	// See mtbbus protocol specification.
+	// No interrupt vector used - just start the timer & check for overflow
+	TCCR0 = (1 << CS01) | (1 << CS00); // prescaler 32
+	OCR0 = 69;
 
 	DDRE |= 0x04; // UART direction
 	uart_in();
@@ -48,6 +68,15 @@ void mtbbus_init(uint8_t addr, uint8_t speed) {
 	UCSR0C = _BV(UCSZ01) | _BV(UCSZ00); // 9-bit data
 	UCSR0A = _BV(MPCM0); // Mutli-processor mode, receive onyl if 9. bit = 1
 	UCSR0B = _BV(RXCIE0) | _BV(TXCIE0) | _BV(UCSZ02) | _BV(RXEN0) | _BV(TXEN0);  // RX, TX enable; RX, TX interrupt enable
+}
+
+bool _t0_elapsed() {
+	return (TIFR & (1 << OCF0));
+}
+
+void _t0_start() {
+	TCNT0 = 0;
+	TIFR = (1 << OCF0);
 }
 
 void mtbbus_set_speed(uint8_t speed) {
@@ -79,10 +108,10 @@ void mtbbus_set_addr(uint8_t addr) {
 
 void mtbbus_update(void) {
 	if (received) {
-		received = false;
 		if (mtbbus_on_receive != NULL)
 			mtbbus_on_receive(received_addr == 0, mtbbus_input_buf[1],
-			                  (uint8_t*)mtbbus_input_buf+2, mtbbus_input_buf_size_2-3);
+			                  (uint8_t*)mtbbus_input_buf+2, mtbbus_input_buf_size-3);
+		received = false; // must be after parsing (prevents changes in mtbbus_input_buf, mtbbus_input_buf_size)
 	}
 
 	if (sent) {
@@ -99,10 +128,18 @@ void mtbbus_update(void) {
 // Sending
 
 int mtbbus_send(uint8_t *data, uint8_t size) {
-	if (!mtbbus_can_fill_output_buf())
+	if (!mtbbus_can_fill_output_buf()) {
+#ifdef SUP_MTBBUS_DIAG
+		mtbbus_diag.unsent++;
+#endif
 		return 1;
-	if (size > MTBBUS_OUTPUT_BUF_MAX_SIZE_USER)
+	}
+	if (size > MTBBUS_OUTPUT_BUF_MAX_SIZE_USER) {
+#ifdef SUP_MTBBUS_DIAG
+		mtbbus_diag.unsent++;
+#endif
 		return 2;
+	}
 
 	for (uint8_t i = 0; i < size; i++)
 		mtbbus_output_buf[i] = data[i];
@@ -113,8 +150,12 @@ int mtbbus_send(uint8_t *data, uint8_t size) {
 }
 
 int mtbbus_send_buf() {
-	if (sending)
+	if (sending) {
+#ifdef SUP_MTBBUS_DIAG
+		mtbbus_diag.unsent++;
+#endif
 		return 1;
+	}
 	sent = false;
 
 	size_t i = mtbbus_output_buf_size;
@@ -127,13 +168,26 @@ int mtbbus_send_buf() {
 }
 
 int mtbbus_send_buf_autolen() {
-	if (sending)
+	if (sending) {
+#ifdef SUP_MTBBUS_DIAG
+		mtbbus_diag.unsent++;
+#endif
 		return 1;
-	if (mtbbus_output_buf[0] > MTBBUS_OUTPUT_BUF_MAX_SIZE_USER)
+	}
+	if (mtbbus_output_buf[0] > MTBBUS_OUTPUT_BUF_MAX_SIZE_USER) {
+#ifdef SUP_MTBBUS_DIAG
+		mtbbus_diag.unsent++;
+#endif
 		return 2;
+	}
+	if (_t0_elapsed()) {
+#ifdef SUP_MTBBUS_DIAG
+		mtbbus_diag.unsent++;
+#endif
+		return 3;
+	}
 	mtbbus_output_buf_size = mtbbus_output_buf[0]+1;
-	mtbbus_send_buf();
-	return 0;
+	return mtbbus_send_buf();
 }
 
 static inline void _mtbbus_send_buf() {
@@ -143,6 +197,10 @@ static inline void _mtbbus_send_buf() {
 
 	while (!(UCSR0A & _BV(UDRE0)));
 	_send_next_byte();
+
+#ifdef SUP_MTBBUS_DIAG
+	mtbbus_diag.sent++;
+#endif
 }
 
 static void _send_next_byte() {
@@ -194,6 +252,8 @@ static inline void _mtbbus_received_ninth(uint8_t data) {
 		receiving = true;
 		mtbbus_input_buf_size = 0;
 		received_crc = crc16modbus_byte(0, received_addr);
+	} else {
+		receiving = false;
 	}
 }
 
@@ -213,8 +273,12 @@ static inline void _mtbbus_received_non_ninth(uint8_t data) {
 		uint16_t msg_crc = (mtbbus_input_buf[mtbbus_input_buf_size-1] << 8) | (mtbbus_input_buf[mtbbus_input_buf_size-2]);
 		if (received_crc == msg_crc) {
 			received = true;
-			// double buffering for proper operation of SET_OUTPUTS
-			mtbbus_input_buf_size_2 = mtbbus_input_buf_size;
+			_t0_start();
+#ifdef SUP_MTBBUS_DIAG
+			mtbbus_diag.received++;
+		} else {
+			mtbbus_diag.bad_crc++;
+#endif
 		}
 
 		receiving = false;
