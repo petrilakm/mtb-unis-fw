@@ -6,10 +6,20 @@
 #include <avr/eeprom.h>
 #include <avr/boot.h>
 #include <avr/pgmspace.h>
+#include <util/atomic.h>
 
 #include "io.h"
 #include "../lib/crc16modbus.h"
 #include "../lib/mtbbus.h"
+
+/* All boot_* functions executing SPM instruction need to be called in
+ * ATOMIC_BLOCK - interrupts need to be disabled during execution of the function,
+ * because the following needs to be met [ATmega128A datasheet]:
+ * "To execute page erase, ... write “X0000011” to SPMCSR and execute SPM
+ * **within four clock cycles** after writing SPMCSR."
+ * This is a real issue in MTB-UNI-2-AVR with baudrate 230 400 bd/s - random
+ * words in flash were not programmed after an attempt to reprogram the flash.
+ */
 
 ///////////////////////////////////////////////////////////////////////////////
 // Function prototypes
@@ -101,7 +111,9 @@ int main() {
 		if (page_erase) {
 			while (boot_spm_busy())
 				mtbbus_update();
-			boot_page_erase(SPM_PAGESIZE*page);
+			ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+				boot_page_erase(SPM_PAGESIZE*page);
+			}
 			while (boot_spm_busy())
 				mtbbus_update();
 			page_erase = false;
@@ -110,7 +122,9 @@ int main() {
 		if (page_write) {
 			while (boot_spm_busy())
 				mtbbus_update();
-			boot_page_write(SPM_PAGESIZE*page);
+			ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+				boot_page_write(SPM_PAGESIZE*page);
+			}
 			while (boot_spm_busy())
 				mtbbus_update();
 			page_write = false;
@@ -152,7 +166,9 @@ static inline void main_program(void) {
 ///////////////////////////////////////////////////////////////////////////////
 
 bool fwcrc_ok(void) {
-	boot_rww_enable_safe();
+	ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+		boot_rww_enable_safe();
+	}
 	uint8_t no_pages = pgm_read_byte_far(&fwattr.no_pages);
 	uint16_t crc_read = pgm_read_word_far(&fwattr.crc);
 
@@ -170,21 +186,16 @@ bool fwcrc_ok(void) {
 ///////////////////////////////////////////////////////////////////////////////
 
 void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len) {
-	if (broadcast)
-		return;
 	_delay_us(2);
 
-	if (command_code == MTBBUS_CMD_MOSI_MODULE_INQUIRY) {
+	if ((command_code == MTBBUS_CMD_MOSI_MODULE_INQUIRY) && (!broadcast)) {
 		mtbbus_send_ack();
 
-	} else if (command_code == MTBBUS_CMD_MOSI_INFO_REQ) {
+	} else if ((command_code == MTBBUS_CMD_MOSI_INFO_REQ) && (!broadcast)) {
 		mtbbus_output_buf[0] = 7;
 		mtbbus_output_buf[1] = MTBBUS_CMD_MISO_MODULE_INFO;
 		mtbbus_output_buf[2] = CONFIG_MODULE_TYPE;
-		if (error_flags.bits.crc)
-			mtbbus_output_buf[3] = 2;
-		else
-			mtbbus_output_buf[3] = 1;
+		mtbbus_output_buf[3] = (error_flags.bits.crc) ? 2 : 1;
 		mtbbus_output_buf[4] = CONFIG_FW_MAJOR;
 		mtbbus_output_buf[5] = CONFIG_FW_MINOR;
 		mtbbus_output_buf[6] = CONFIG_PROTO_MAJOR;
@@ -192,10 +203,12 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 		mtbbus_send_buf_autolen();
 
 	} else if ((command_code == MTBBUS_CMD_MOSI_CHANGE_SPEED) && (data_len >= 1)) {
-		eeprom_write_byte(EEPROM_ADDR_MTBBUS_SPEED, data[0]);
 		mtbbus_set_speed(data[0]);
+		if (!broadcast)
+			mtbbus_send_ack();
+		eeprom_update_byte(EEPROM_ADDR_MTBBUS_SPEED, data[0]);
 
-	} else if ((command_code == MTBBUS_CMD_MOSI_WRITE_FLASH) && (data_len >= 66)) {
+	} else if ((command_code == MTBBUS_CMD_MOSI_WRITE_FLASH) && (data_len >= 66) && (!broadcast)) {
 		uint8_t _page = data[0];
 		uint8_t _subpage = data[1];
 		if ((_subpage % 64 != 0) || (_page >= 240)) {
@@ -216,9 +229,11 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 		}
 		subpage = _subpage;
 
-		for (size_t i = 0; i < 64; i += 2) {
-			uint16_t word = data[i+2] | (data[i+3] << 8);
-			boot_page_fill(SPM_PAGESIZE*page + _subpage + i, word);
+		ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+			for (size_t i = 0; i < 64; i += 2) {
+				uint16_t word = data[i+2] | (data[i+3] << 8);
+				boot_page_fill(SPM_PAGESIZE*page + _subpage + i, word);
+			}
 		}
 
 		if (_subpage == SPM_PAGESIZE-64) {
@@ -226,7 +241,7 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 			page_write = true;
 		}
 
-	} else if (command_code == MTBBUS_CMD_MOSI_WRITE_FLASH_STATUS_REQ) {
+	} else if ((command_code == MTBBUS_CMD_MOSI_WRITE_FLASH_STATUS_REQ) && (!broadcast)) {
 		mtbbus_output_buf[0] = 4;
 		mtbbus_output_buf[1] = MTBBUS_CMD_MISO_WRITE_FLASH_STATUS;
 		mtbbus_output_buf[2] = (page_erase || page_write);
@@ -234,11 +249,11 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 		mtbbus_output_buf[4] = subpage;
 		mtbbus_send_buf_autolen();
 
-	} else if (command_code == MTBBUS_CMD_MOSI_REBOOT) {
+	} else if ((command_code == MTBBUS_CMD_MOSI_REBOOT) && (!broadcast)) {
 		mtbbus_on_sent = &check_and_boot;
 		mtbbus_send_ack();
 
-	} else if ((command_code == MTBBUS_CMD_MOSI_FWUPGD_REQUEST) && (data_len >= 1)) {
+	} else if ((command_code == MTBBUS_CMD_MOSI_FWUPGD_REQUEST) && (data_len >= 1) && (!broadcast)) {
 		mtbbus_send_ack();
 
 	} else {
