@@ -19,7 +19,7 @@ extern uint8_t config_servo_speed[NO_SERVOS];
 
 // Warning: these functions take long time to execute
 void config_load(void);
-void config_save(void);
+bool config_save(void);
 
 void config_boot_fwupgd(void);
 void config_boot_normal(void);
