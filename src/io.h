@@ -16,7 +16,7 @@ extern volatile uint8_t dbg;
 // If you change IO pins mapping, look into ‹io.c› and change approprite
 // functions.
 
-#define NO_INPUTS 16
+#define NO_INPUTS (16)
 
 #define NO_OUTPUTS (16)
 #define NO_SERVOS (6)
@@ -47,45 +47,9 @@ bool io_get_output_raw(uint8_t onum);
 extern volatile uint16_t output_shadow;
 extern uint16_t output_virt;
 
-//static inline bool io_led_red_state() { return !((PORTG >> PIN_LED_RED) & 0x1); }
-//static inline bool io_led_green_state() { return 0; }
-//static inline bool io_led_blue_state() { return !((PORTG >> PIN_LED_BLUE) & 0x1); }
-
-//static inline void io_led_red_toggle(void) { io_led_red(!io_led_red_state()); }
-//static inline void io_led_green_toggle(void) { io_led_green(!io_led_green_state()); }
-//static inline void io_led_blue_toggle(void) { io_led_blue(!io_led_blue_state()); }
-
 static inline bool io_button(void) { return (PING >> PIN_BUTTON) & 0x1; }
 
 static inline void uart_out() { PORTE &= ~(1 << PIN_UART_DIR); }
 static inline void uart_in() { PORTE |= (1 << PIN_UART_DIR); }
-
-static inline void io_tpmiso(bool state) {
-	if (state)
-		PORTB |= (1 << PIN_TPMISO);
-	else
-		PORTB &= ~(1 << PIN_TPMISO);
-}
-
-static inline void io_tpmiso_toggle(void) {
-	if (PORTB & (1 << PIN_TPMISO))
-		PORTB &= ~(1 << PIN_TPMISO);
-	else
-		PORTB |= (1 << PIN_TPMISO);
-}
-
-static inline void io_tpmosi(bool state) {
-	if (state)
-		PORTB |= (1 << PIN_TPMOSI);
-	else
-		PORTB &= ~(1 << PIN_TPMOSI);
-}
-
-static inline void io_tpmosi_toggle(void) {
-	if (PORTB & (1 << PIN_TPMOSI))
-		PORTB &= ~(1 << PIN_TPMOSI);
-	else
-		PORTB |= (1 << PIN_TPMOSI);
-}
 
 #endif

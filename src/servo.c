@@ -41,6 +41,7 @@ void servo_set_raw(uint8_t num, uint16_t pos) {
 	}
 }
 
+// read virtual inputs and determine servo position
 uint8_t servo_get_input_state(uint8_t num) {
 	if (num > NO_SERVOS) {
 		return 0;
@@ -62,6 +63,8 @@ uint8_t servo_get_input_state(uint8_t num) {
 			}
 			return 2;
 		default:
+			// set null state
+			servo_state[num] = 0;
 			return 0;
 	}
 }

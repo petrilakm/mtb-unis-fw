@@ -289,8 +289,14 @@ static void on_initialized(void) {
 	led_blue_off();
 	uint8_t i;
 	uint8_t inp;
+	uint8_t inputnum;
 	for(i=0; i < NO_SERVOS; i++) {
-		inp = (inputs_logic_state >> (i*2)) & 3; // extract input state
+		inputnum = config_servo_input_map[i];
+		if (inputnum < NO_SERVOS) {
+			inp = (inputs_logic_state >> (inputnum)) & 3; // extract input state
+		} else {
+			inp = 0;
+		}
 		servo_init_position(i, (inp == 2)); // pos 2 -> servopos 2, else use servopos 1
 	}
 	PORTB |= (1 << PB4); // servo power enable
@@ -425,7 +431,8 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 				} else {
 					config_servo_speed[i] = 30;
 				}
-			// pos += NO_SERVOS; // 6 -> 55
+			pos += NO_SERVOS; // 6 -> 55
+			memcpy(config_servo_input_map, data+pos, NO_SERVOS);
 			config_write = true;
 			mtbbus_send_ack();
 		} else { goto INVALID_MSG; }
@@ -434,7 +441,6 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 	case MTBBUS_CMD_MOSI_GET_CONFIG:
 		if (!broadcast) {
 			uint8_t pos = 0;
-			mtbbus_output_buf[0] = 56;
 			mtbbus_output_buf[1] = MTBBUS_CMD_MISO_MODULE_CONFIG;
 			pos = 2;
 			memcpy((uint8_t*)mtbbus_output_buf+pos, config_safe_state, NO_OUTPUTS_ALL);
@@ -444,9 +450,12 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 			mtbbus_output_buf[pos] = config_servo_enabled;
 			pos += 1;
 			memcpy((uint8_t*)mtbbus_output_buf+pos, config_servo_position, NO_SERVOS*2);
-			pos += NO_SERVOS*2*2;
+			pos += NO_SERVOS*2;
 			memcpy((uint8_t*)mtbbus_output_buf+pos, config_servo_speed, NO_SERVOS);
 			pos += NO_SERVOS;
+			memcpy((uint8_t*)mtbbus_output_buf+pos, config_servo_input_map, NO_SERVOS);
+			pos += NO_SERVOS;
+			mtbbus_output_buf[0] = pos-1;
 			mtbbus_send_buf_autolen();
 		} else { goto INVALID_MSG; }
 		break;

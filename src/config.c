@@ -11,21 +11,35 @@ uint8_t config_mtbbus_addr;
 uint8_t config_servo_enabled;	// 1 byte
 uint8_t config_servo_position[NO_SERVOS*2];	// 12 bytes
 uint8_t config_servo_speed[NO_SERVOS];	// 6 bytes
+uint8_t config_servo_input_map[NO_SERVOS]; 	// 6 bytes
 
-
+// len = 0x01
 #define EEPROM_ADDR_VERSION                ((uint8_t*)0x00)
+// len = 0x01
 #define EEPROM_ADDR_MTBBUS_SPEED           ((uint8_t*)0x01)
+// len = 0x01
 #define EEPROM_ADDR_INT_WDRF               ((uint8_t*)0x02)
+// len = 0x01
 #define EEPROM_ADDR_BOOT                   ((uint8_t*)0x03)
+// len = 0x01
 #define EEPROM_ADDR_MTBBUS_ADDR            ((uint8_t*)0x04)
+// len = 0x01
 #define EEPROM_ADDR_BOOTLOADER_VER_MAJOR   ((uint8_t*)0x08)
+// len = 0x01
 #define EEPROM_ADDR_BOOTLOADER_VER_MINOR   ((uint8_t*)0x09)
+// len = 0x1C
 #define EEPROM_ADDR_SAFE_STATE             ((uint8_t*)0x10)
+// len = 0x08
 #define EEPROM_ADDR_INPUTS_DELAY           ((uint8_t*)0x30)
+// len = 0x01
 #define EEPROM_ADDR_SERVO_ENABLED          ((uint8_t*)0x38)
-#define EEPROM_ADDR_SERVO_POSITION         ((uint16_t*)0x39)
+// len = 0x0c
+#define EEPROM_ADDR_SERVO_POSITION         ((uint8_t*)0x39)
+// len = 0x06
 #define EEPROM_ADDR_SERVO_SPEED            ((uint8_t*)0x45)
-#define EEPROM_ADDR_EMPTY                  ((void*)0x57)
+// len = 0x06
+#define EEPROM_ADDR_SERVO_INPUT_MAP        ((uint8_t*)0x4b)
+#define EEPROM_ADDR_EMPTY                  ((void*)0x51)
 
 void config_load(void) {
 	uint8_t version = eeprom_read_byte(EEPROM_ADDR_VERSION);
@@ -35,6 +49,18 @@ void config_load(void) {
 		config_mtbbus_addr = 1;
 		memset(config_safe_state, 0, NO_OUTPUTS);
 		memset(config_inputs_delay, 0, NO_INPUTS/2);
+		config_servo_enabled = 1;
+		for(uint8_t i = 0; i<12; i++,i++) {
+			config_servo_position[0+i] = 70;
+			config_servo_position[1+i] = 90;
+		}
+		memset(config_servo_speed, 20, 6);
+		config_servo_input_map[0] = 1;
+		config_servo_input_map[1] = 3;
+		config_servo_input_map[2] = 5;
+		config_servo_input_map[3] = 7;
+		config_servo_input_map[4] = 9;
+		config_servo_input_map[5] = 11;
 		while (!config_save()); // loop until everything saved
 		return;
 	}
@@ -56,6 +82,7 @@ void config_load(void) {
 	for (size_t i = 0; i < NO_SERVOS; i++)
 		if (config_servo_speed[i] == 0) config_servo_speed[i] = 10;
 	config_servo_enabled = eeprom_read_byte(EEPROM_ADDR_SERVO_ENABLED);
+	eeprom_read_block(config_servo_input_map,EEPROM_ADDR_SERVO_INPUT_MAP,NO_SERVOS);
 }
 
 bool config_save(void) {
@@ -99,6 +126,12 @@ bool config_save(void) {
 		if (!eeprom_is_ready())
 			return false;
 		eeprom_update_byte(EEPROM_ADDR_SERVO_SPEED+i, config_servo_speed[i]);
+	}
+
+	for (uint8_t i = 0; i < NO_SERVOS; i++) {
+		if (!eeprom_is_ready())
+			return false;
+		eeprom_update_byte(EEPROM_ADDR_SERVO_INPUT_MAP+i, config_servo_input_map[i]);
 	}
 
 	return eeprom_is_ready(); // true iff no write done
