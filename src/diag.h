@@ -50,7 +50,7 @@ void diag_init(void);
 void diag_update(void); // called each 100 ms
 void vcc_start_measure(void);
 
-#define DIAG_UPDATE_PERIOD 10 // 100 ms
+//#define DIAG_UPDATE_PERIOD 10 // 100 ms
 extern volatile uint16_t vcc_voltage;
 #define VCC_MAX_DIFF 10 // 0.2 V
 

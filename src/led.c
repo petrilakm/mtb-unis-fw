@@ -38,21 +38,10 @@ void led_update(void) {
     }
   }
 
-  if (led_red_counter > 0) {
-    led_red_counter--;
-    /*
-    if (((!led_red_flashing) && (led_red_counter == LED_RED_OK_OFF)) ||
-      ((led_red_flashing) && (led_red_counter == LED_RED_ERR_OFF)))
-      led_red_off();
-      */
-      if (led_red_counter == 0) led_red_off();
-  }
-  /*
-  if ((led_red_flashing) && (led_red_counter == 0)) {
-    led_red_counter = LED_RED_ERR_ON;
-    led_red_on();
-  }
-  */
+	if (led_red_counter > 0) {
+		led_red_counter--;
+		if (led_red_counter == 0) led_red_off();
+	}
   
   // zelená - vždy bliká, nebo svítí, nikdy není po tmì
   if (led_gr_counter > 0) {

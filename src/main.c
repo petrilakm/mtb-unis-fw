@@ -21,6 +21,8 @@
 #include "../lib/mtbbus.h"
 #include "../lib/crc16modbus.h"
 
+#include <util/delay.h>
+
 ///////////////////////////////////////////////////////////////////////////////
 // Function prototypes
 
@@ -72,8 +74,12 @@ volatile uint8_t mtbbus_auto_speed_timer = 0;
 volatile uint8_t mtbbus_auto_speed_last;
 #define MTBBUS_AUTO_SPEED_TIMEOUT 20 // 200 ms
 
-volatile uint8_t diag_timer = 0;
+// 2 kHz to 100 Hz
+#define TIMER_0_MAX (20)
+volatile uint8_t timer_0 = 0;
 volatile bool t3_elapsed = false;
+ // 100 Hz to 10 Hz
+uint8_t timer_diag = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -97,11 +103,6 @@ static void handle_flags(void) {
 
 	if ((mtbbus_auto_speed_in_progress) && (mtbbus_auto_speed_timer == MTBBUS_AUTO_SPEED_TIMEOUT)) {
 		mtbbus_auto_speed_next();
-	}
-
-	if (diag_timer >= DIAG_UPDATE_PERIOD) {
-		diag_timer = 0;
-		diag_update();
 	}
 
 	if (scom_to_update) {
@@ -131,6 +132,10 @@ static void timer_100hz(void) {
 	inputs_fall_update();
 	handle_timers();
 	update_button();
+	if ((++timer_diag) > 10) {
+		timer_diag = 0;
+		diag_update();
+	}
 
 	led_red_flashing = error_flags.all;
 	state_nomtb = !mtbbus_addressed();
@@ -189,17 +194,7 @@ static void handle_timers(void) {
 		if (mtbbus_auto_speed_timer >= MTBBUS_AUTO_SPEED_TIMEOUT)
 			mtbbus_auto_speed_next();
 	}
-
-	{
-		static uint8_t diag_timer = 0;
-		diag_timer++;
-		if (diag_timer >= DIAG_UPDATE_PERIOD) {
-			diag_update();
-			diag_timer = 0;
-		}
-	}
 }
-
 
 void init(void) {
 	cli();
@@ -218,23 +213,28 @@ void init(void) {
 	mcucsr.bits.borf = false; // brownout detects basically all power-on resets
 	mtbbus_warn_flags.all = (mcucsr.all >> 1) & 0x0F;
 
-				uart_in();
+	uart_in();
 	io_init();
+	// led wave
 	led_green_on();
-	led_red_on();
+	led_red_off();
 	led_blue_off();
+	_delay_ms(20);
+	led_green_off();
+	led_red_on();
+	_delay_ms(20);
+	led_red_off();
+	led_blue_on();
+	_delay_ms(20);
+	// end of led wave
 	scom_init();
 
-	// Setup timer 0 @ 100 Hz (period 10 ms)
-	TCCR0	= (1 << WGM01); // CTC mode
-	OCR0 = 143; // 100.00000 Hz
-	TCCR0 |= 7; // 1024× prescaler, run
-	TIMSK |= (1 << OCIE0) | (1 << TOIE0); // enable compare match interrupt
+	// Setup timer 0 - for libmtb
 
 	// Setup timer 2 @ 2 kHz
 	TCCR2 = (1 << WGM21);	// CTC mode
 	OCR2	= 114; // 2003.478261 Hz
-	TCCR2 |= 5;	// 64× prescaler, run
+	TCCR2 |= 3;	// 64× prescaler, run
 	TIMSK |= (1 << OCIE2);	// enable compare match interrupt
 
 	// Setup timers for servo operation
@@ -306,19 +306,25 @@ static void on_initialized(void) {
 ISR(TIMER2_COMP_vect) {
 	// Timer 2 @ 2 kHz (period 500 us)
 	inputs_debounce_to_update = true;
+	if ((++timer_0) > TIMER_0_MAX) {
+		timer_0 = 0;
+		// Timer 100 Hz (period 10 ms)
+		t3_elapsed = true;
+		if (TCNT0 > 0)
+			mtbbus_warn_flags.bits.missed_timer = true;
+	}
 }
 
 ISR(TIMER0_COMP_vect) {
-	// Timer 0 @ 100 Hz (period 10 ms)
-	if (TCNT0 > 0)
-		mtbbus_warn_flags.bits.missed_timer = true;
+	// must be empty, used in libmtb
 
-	t3_elapsed = true;
 }
 
 ISR(TIMER1_COMPA_vect) {
 	// must be empty, because bootloader start timer and ISR !
 }
+
+
 ISR(TIMER3_COMPA_vect) {
 	// must be empty, because bootloader start timer and ISR !
 }

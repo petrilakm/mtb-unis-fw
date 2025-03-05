@@ -43,7 +43,7 @@ uint8_t config_servo_input_map[NO_SERVOS]; 	// 6 bytes
 
 void config_load(void) {
 	uint8_t version = eeprom_read_byte(EEPROM_ADDR_VERSION);
-	if (version == 0xFF) {
+	if (version != CONFIG_EEPROM_VERSION) {
 		// default EEPROM content → reset config
 		config_mtbbus_speed = MTBBUS_SPEED_38400;
 		config_mtbbus_addr = 1;
@@ -92,7 +92,7 @@ bool config_save(void) {
 
 	if (!eeprom_is_ready())
 		return false;
-	eeprom_update_byte(EEPROM_ADDR_VERSION, 1);
+	eeprom_update_byte(EEPROM_ADDR_VERSION, CONFIG_EEPROM_VERSION);
 	if (!eeprom_is_ready())
 		return false;
 	eeprom_update_byte(EEPROM_ADDR_MTBBUS_SPEED, config_mtbbus_speed);
@@ -134,7 +134,7 @@ bool config_save(void) {
 		eeprom_update_byte(EEPROM_ADDR_SERVO_INPUT_MAP+i, config_servo_input_map[i]);
 	}
 
-	return eeprom_is_ready(); // true iff no write done
+	return eeprom_is_ready(); // true if no write done
 }
 
 uint8_t input_delay(uint8_t input) {
