@@ -292,7 +292,7 @@ static void on_initialized(void) {
 	uint8_t inputnum;
 	for(i=0; i < NO_SERVOS; i++) {
 		inputnum = config_servo_input_map[i];
-		if (inputnum < NO_SERVOS) {
+		if (inputnum < NO_OUTPUTS) {
 			inp = (inputs_logic_state >> (inputnum)) & 3; // extract input state
 		} else {
 			inp = 0;
