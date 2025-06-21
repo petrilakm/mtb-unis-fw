@@ -1,14 +1,20 @@
 #include <stdbool.h>
 #include "servo.h"
+#include "inputs.h"
+#include "outputs.h"
 
 uint16_t servo_pos[NO_SERVOS] = {4000,}; // actual servo position
 // state + 4bit=no pulse state 000s 00pp
 // 0000 0010 - servo end in position 2
 // 0001 0001 - servo stopped in position 1
 volatile uint8_t servo_state[NO_SERVOS] = {0,}; // used in ISR !
+uint8_t servo_running[NO_SERVOS]; // bool if servo is in motion
 // timeout in stop state
 uint8_t servo_timeout[NO_SERVOS] = {0,};
 uint8_t servo_enabled = 0;
+// virtual inputs
+uint16_t servos_inputs_state;
+uint16_t servos_inputs_state_old;
 // for manual servo positioning
 volatile uint8_t servo_test_select = 255;
 uint8_t servo_test_select_last = 255;
@@ -41,14 +47,16 @@ void servo_set_raw(uint8_t num, uint16_t pos) {
 	}
 }
 
-// read virtual inputs and determine servo position
-uint8_t servo_get_input_state(uint8_t num) {
+// read virtual outputs and determine servo position
+uint8_t servo_get_output_state(uint8_t num) {
 	if (num > NO_SERVOS) {
 		return 0;
 	}
 	uint8_t tmp;
 	// get only 2 bits from input vector
-	tmp = ((output_virt >> (num*2)) & 0x03);
+	tmp  = _outputs_state[16+num*2+0] << 0; // pos A output
+	tmp |= _outputs_state[16+num*2+1] << 1; // pos B output
+	//tmp = ((servos_outputs_state >> (num*2)) & 0x03);
 	switch (tmp) {
 		case 1:
 			if ((servo_state[num] & 3) != 1) {
@@ -64,26 +72,80 @@ uint8_t servo_get_input_state(uint8_t num) {
 			return 2;
 		default:
 			// set null state
-			servo_state[num] = 0;
+			// servo_state[num] = 0;
 			return 0;
 	}
 }
 
-uint16_t servo_get_config_position(uint8_t num, uint8_t state) {
-	if (state == 1) {
-		return (config_servo_position[num*2+0]+SERVO_OFFSET_POS) << 5;
+// get virtual inputs for one serfo from real inputs
+uint8_t servo_get_mapped_bool(uint8_t num) {
+	uint8_t first_input_num = config_servo_input_map[num];
+	if (first_input_num > 0) {
+		return true; // mapped input, return true
+	} else {
+		return false; // no mapped input
 	}
-	if (state == 2) {
-		return (config_servo_position[num*2+1]+SERVO_OFFSET_POS) << 5;
-	}
-	return (127<<5);
 }
 
+// get virtual inputs for one servo from real inputs
+uint8_t servo_get_mapped_input(uint8_t num) {
+	uint8_t first_input_num = config_servo_input_map[num];
+	// check valid range 1-15 (1 means real inputs 0,1; 15 means real inputs 14,15)
+	if ((first_input_num > 0) && (first_input_num < NO_INPUTS)) {
+		first_input_num--; // rean inputs count from 1 (0 means no map)
+		return (inputs_logic_state >> first_input_num) & 3;
+	} else {
+		return 0; // no mapped input
+	}
+}
+
+// read real inputs and map to virtual inputs
+void servo_set_input_state(uint8_t num) {
+	if (num > NO_SERVOS) {
+		return;
+	}
+	uint8_t inpstate = 0;
+	if (servo_get_mapped_bool(num)) {
+		// mapped input - use real inputs by map
+		inpstate = servo_get_mapped_input(num);
+	} else {
+		// no map - use simulated inputs
+		// for now only show requested state
+		if (!servo_running[num]) {
+			// in end position report current position
+			inpstate = (servo_state[num] & 3);
+		}
+	}
+	servos_inputs_state &= ~(3 << (num*2)); // mask old state
+	servos_inputs_state |=  (inpstate << (num*2)); // write current state
+}
+
+// internal function, no error checking
+uint16_t servo_get_config_position_internal(uint8_t num, uint8_t internal_state) {
+	return (config_servo_position[num*2+internal_state]+SERVO_OFFSET_POS) << 5;
+}
+
+// get saved position or center position
+uint16_t servo_get_config_position(uint8_t num, uint8_t state) {
+	if (state == 1) {
+		return servo_get_config_position_internal(num, 0);
+	}
+	if (state == 2) {
+		return servo_get_config_position_internal(num, 1);
+	}
+	// unknown, get center position -> calculate it
+	uint16_t tmp = 0;
+	tmp += (servo_get_config_position_internal(num, 0)) >> 1; // position divided by 2
+	tmp += (servo_get_config_position_internal(num, 1)) >> 1; // position divided by 2
+	return (tmp); // return average value avg = (a/2 + b/2) = (a+b)/2;
+}
+
+// ...
 uint8_t servo_get_config_speed(uint8_t num) {
 	return config_servo_speed[num];
 }
 
-
+// initialize servo pulse outputs, after boot
 void servo_init(void) {
 	// timers inicialized in main
 	PORTB &= ~(1 << PB4); // servo power disable
@@ -96,14 +158,19 @@ void servo_init(void) {
 	servo_enabled = 0; // all disable, first determine last position, then enable
 }
 
-void servo_init_position(uint8_t servo, bool state) {
+// full initialize one servo, depend on configuration
+void servo_init_position(uint8_t servo) {
 	if (servo > NO_SERVOS) return;
 	bool servoena;
 	uint8_t statenum;
 	servoena = (((config_servo_enabled >> servo) & 1) > 0);
 	if (servoena) {
+		if (servo_get_mapped_bool(servo)) {
+			statenum = servo_get_mapped_input(servo);
+		} else {
+			statenum = 0; // unknown position
+		}
 		// determine initial servo position
-		statenum = (state) ? 2 : 1;
 		servo_state[servo] = statenum;
 		// load position to RAM
 		servo_pos[servo] = servo_get_config_position(servo, statenum);
@@ -131,7 +198,8 @@ void servo_update(void) {
 		postdiv2 = 2;
 		// 50 Hz
 
-		servo_get_input_state(servo_cnt);
+		servo_get_output_state(servo_cnt); // get requested position (output -> MTB output)
+		servo_set_input_state(servo_cnt); // return current position (input -> MTB input)
 
 		servo_cnt++;
 		if (servo_cnt>5) servo_cnt=0;
@@ -198,6 +266,7 @@ void servo_update(void) {
 						// end position
 						servo_pos[i] = pos_end;
 						servo_timeout[i] = SERVO_TIMEOUT_MAX;
+						servo_running[i] = false;
 					} else {
 						if (diff > 0) {
 							servo_pos[i] -= speed;
@@ -205,6 +274,7 @@ void servo_update(void) {
 						if (diff < 0) {
 							servo_pos[i] += speed;
 						}
+						servo_running[i] = true;
 					}
 					servo_set_raw(i, servo_pos[i]);
 				}

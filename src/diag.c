@@ -16,7 +16,7 @@ volatile uint32_t uptime_seconds = 0;
 
 #define DIAG_STEP_VCC_READY 0
 #define DIAG_STEP_VCC_MEASURE 1
-#define DIAG_STEP_OVER 2
+#define DIAG_STEP_OVER 10
 
 volatile uint8_t diag_step = DIAG_STEP_OVER-1;
 

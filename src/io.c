@@ -27,6 +27,7 @@ bool io_get_input_raw(uint8_t inum) {
 
 uint16_t io_get_inputs_raw(void) {
 	uint16_t inputs;
+	// bit position = input number
 	inputs =  ((PINA	 )) << 8;
 	inputs |= ((PINE >> 6) & 0x03);
 	inputs |= ((PINF	 ) & 0xFC);
@@ -48,7 +49,7 @@ void io_set_outputs_raw() {
 	PORTC = high;
 }
 
-void io_set_outputs_raw_mask(uint16_t state, uint16_t mask) {
+void io_set_outputs_raw_mask(uint32_t state, uint32_t mask) {
 	output_shadow = (output_shadow & (~mask));
 	output_shadow |= (state & mask);
 	io_set_outputs_raw();

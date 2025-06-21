@@ -288,17 +288,10 @@ static void on_initialized(void) {
 	led_green_off();
 	led_blue_off();
 	uint8_t i;
-	uint8_t inp;
-	uint8_t inputnum;
 	for(i=0; i < NO_SERVOS; i++) {
-		inputnum = config_servo_input_map[i];
-		if (inputnum < NO_OUTPUTS) {
-			inp = (inputs_logic_state >> (inputnum)) & 3; // extract input state
-		} else {
-			inp = 0;
-		}
-		servo_init_position(i, (inp == 2)); // pos 2 -> servopos 2, else use servopos 1
+		servo_init_position(i);
 	}
+	// all servos initialized
 	PORTB |= (1 << PB4); // servo power enable
 	initialized = true;
 }
@@ -363,9 +356,8 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 		return;
 
 	error_flags.bits.bad_mtbbus_polarity = false;
-	//led_green_ok();
 	if ((!broadcast) && (command_code != MTBBUS_CMD_MOSI_MODULE_INQUIRY)) {
-		led_red_ok();
+		led_red_ok(); // message to us - show activity via led
 	}
 	_delay_us(2);
 
@@ -382,12 +374,13 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 			static bool last_diag_changed = false;
 			static bool first_scan = true;
 			bool last_ok = data[0] & 0x01;
-			if ((inputs_logic_state != inputs_old) || (last_input_changed && !last_ok) || (first_scan)) {
+			if ((inputs_logic_state != inputs_old) || (servos_inputs_state != servos_inputs_state_old) || (last_input_changed && !last_ok) || (first_scan)) {
 				// Send inputs changed
 				last_input_changed = true;
 				first_scan = false;
 				mtbbus_send_inputs(MTBBUS_CMD_MISO_INPUT_CHANGED);
 				inputs_old = inputs_logic_state;
+				servos_inputs_state_old = servos_inputs_state;
 				led_red_ok();
 			} else {
 				last_input_changed = false;
@@ -481,7 +474,7 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 		break;
 
 	case MTBBUS_CMD_MOSI_SET_OUTPUT:
-		if ((data_len >= 6) && (!broadcast)) {
+		if ((data_len >= 8) && (!broadcast)) {
 			// Send response first, because setting of outputs takes some time
 			// TODO: make output_set_zipped faster?
 			mtbbus_output_buf[0] = data_len+1;
@@ -600,10 +593,12 @@ void mtbbus_send_ack(void) {
 }
 
 void mtbbus_send_inputs(uint8_t message_code) {
-	mtbbus_output_buf[0] = 3;
+	mtbbus_output_buf[0] = 5;
 	mtbbus_output_buf[1] = message_code;
-	mtbbus_output_buf[2] = (inputs_logic_state >> 8) & 0xFF;
-	mtbbus_output_buf[3] = inputs_logic_state & 0xFF;
+	mtbbus_output_buf[2] = (inputs_logic_state >> 0) & 0xFF;
+	mtbbus_output_buf[3] = (inputs_logic_state >> 8) & 0xFF;
+	mtbbus_output_buf[4] = (servos_inputs_state >> 0) & 0xFF;
+	mtbbus_output_buf[5] = (servos_inputs_state >> 8) & 0xFF;
 	mtbbus_send_buf_autolen();
 }
 

@@ -18,12 +18,12 @@ const uint8_t _flicker_periods[] = { // in times of calls to outputs_update (10 
 
 // Each output has it's flickering counter to avoid neccessity for single
 // lowest-common-multiplier counter (LCM is too big)
-uint8_t _flicker_counters[NO_OUTPUTS] = {0, };
-bool _flicker_enabled[NO_OUTPUTS] = {false, };
+uint8_t _flicker_counters[NO_OUTPUTS_ALL] = {0, };
+bool _flicker_enabled[NO_OUTPUTS_ALL] = {false, };
 
 // State according to ‹protocol›
 // ‹https://github.com/kmzbrnoI/mtbbus-protocol/blob/master/modules/uni.md›
-uint8_t _outputs_state[NO_OUTPUTS] = {0, };
+uint8_t _outputs_state[NO_OUTPUTS_ALL] = {0, };
 
 bool outputs_need_apply = false;
 
@@ -50,11 +50,11 @@ void outputs_set_zipped(uint8_t data[], size_t length) {
 	if (length < 6)
 		return;
 
-	uint16_t full_mask = data[1] | (data[0] << 8);
-	uint16_t bin_state = data[5] | (data[4] << 8);
-	size_t bytei = 6;
+	uint32_t full_mask = ((uint32_t) data[3] << 24) | ((uint32_t) data[2] << 16) | (data[1] << 8) | data[0];
+	uint32_t bin_state = ((uint32_t) data[7] << 24) | ((uint32_t) data[6] << 16) | (data[5] << 8) | data[4];
+	size_t bytei = 8;
 
-	for (uint8_t i = 0; i < NO_OUTPUTS; i++) {
+	for (uint8_t i = 0; i < NO_OUTPUTS_ALL; i++) {
 		if (((full_mask) & 1) == 0) {
 			_outputs_state[i] = (bin_state) & 1;
 		} else {
@@ -66,12 +66,10 @@ void outputs_set_zipped(uint8_t data[], size_t length) {
 		full_mask >>= 1;
 		bin_state >>= 1;
 	}
-
-	output_virt = data[3] | (data[2] << 8);
 }
 
-void outputs_set_full(uint8_t data[NO_OUTPUTS]) {
-	memcpy((uint8_t*)_outputs_state, (uint8_t*)data, NO_OUTPUTS);
+void outputs_set_full(uint8_t data[NO_OUTPUTS_ALL]) {
+	memcpy((uint8_t*)_outputs_state, (uint8_t*)data, NO_OUTPUTS_ALL);
 	outputs_need_apply = true;
 }
 

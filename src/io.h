@@ -22,6 +22,7 @@ extern volatile uint8_t dbg;
 #define NO_SERVOS (6)
 #define NO_SERVO_OUTPUTS (NO_SERVOS*2)
 #define NO_OUTPUTS_ALL (NO_OUTPUTS+NO_SERVO_OUTPUTS)
+#define NO_INPUTS_ALL  (NO_INPUTS+NO_SERVO_OUTPUTS)
 
 #define PIN_LED_GREEN PG0
 #define PIN_LED_RED PG3
@@ -40,12 +41,11 @@ uint16_t io_get_inputs_raw();
 
 void io_set_output_raw(uint8_t onum, bool state);
 void io_set_outputs_raw();
-void io_set_outputs_raw_mask(uint16_t state, uint16_t mask);
+void io_set_outputs_raw_mask(uint32_t state, uint32_t mask);
 uint16_t io_get_outputs_raw(void);
 bool io_get_output_raw(uint8_t onum);
 
 extern volatile uint16_t output_shadow;
-extern uint16_t output_virt;
 
 static inline bool io_button(void) { return (PING >> PIN_BUTTON) & 0x1; }
 

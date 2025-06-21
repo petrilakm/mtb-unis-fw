@@ -38,7 +38,7 @@ void set_address(uint8_t address);
 #define CONFIG_FW_MINOR 0
 #define CONFIG_PROTO_MAJOR 4
 #define CONFIG_PROTO_MINOR 1
-#define CONFIG_EEPROM_VERSION (02)
+#define CONFIG_EEPROM_VERSION (03)
 
 #define CONFIG_BOOT_FWUPGD 0x01
 #define CONFIG_BOOT_NORMAL 0x00
