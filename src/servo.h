@@ -10,11 +10,12 @@
 // 1s of servo signal in steady state
 #define SERVO_TIMEOUT_MAX (50*1)
 // 120s of manual positioning mode
-#define SERVO_TEST_TIMEOUT_MAX (50*120)
+#define SERVO_TEST_TIMEOUT_MAX (50*300)
 
 #define SERVO_OFFSET_POS (46)
 
-extern volatile uint8_t servo_state[NO_SERVOS];
+extern volatile uint8_t servo_state_target[NO_SERVOS];
+extern volatile uint8_t servo_state_current[NO_SERVOS];
 extern uint8_t servo_running[NO_SERVOS];
 extern uint16_t servo_pos[NO_SERVOS];
 extern uint8_t servo_enabled;

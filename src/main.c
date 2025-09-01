@@ -326,7 +326,7 @@ ISR(TIMER3_COMPA_vect) {
 ISR(TIMER1_CAPT_vect) {
 	uint8_t i;
 	for (i=0; i<3; i++) {
-		if ((servo_state[i] & 0x10) > 0) {
+		if ((servo_state_target[i] & 0x10) > 0) {
 			servo_set_enable_one(i, false);
 		} else {
 			servo_set_enable_one(i, true);
@@ -336,7 +336,7 @@ ISR(TIMER1_CAPT_vect) {
 ISR(TIMER3_CAPT_vect) {
 	uint8_t i;
 	for (i=3; i<6; i++) {
-		if ((servo_state[i] & 0x10) > 0) {
+		if ((servo_state_target[i] & 0x10) > 0) {
 			servo_set_enable_one(i, false);
 		} else {
 			servo_set_enable_one(i, true);
@@ -685,9 +685,11 @@ void send_diag_value(uint8_t i) {
 		break;
 
 	case MTBBUS_DV_VMCU:
+		// DEVEL - DEBUG
 		mtbbus_output_buf[0] = 2+2;
-		mtbbus_output_buf[3] = vcc_voltage >> 8;
-		mtbbus_output_buf[4] = vcc_voltage & 0xFF;
+		mtbbus_output_buf[3] = servo_state_target[0];
+		mtbbus_output_buf[4] = servo_state_current[0];
+
 		break;
 
 	case MTBBUS_DV_MTBBUS_RECEIVED:

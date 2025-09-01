@@ -4,8 +4,10 @@
 #include "outputs.h"
 
 uint16_t servo_pos[NO_SERVOS] = {4000,}; // actual servo position
-// state + 4bit=no pulse state 000s 00pp
-// 0000 0010 - servo end in position 2
+// last position
+// state   - 1 -> no pulse on output
+// 0lls 00pp
+// 0?00 0010 - servo moving to position 2
 // 0001 0001 - servo stopped in position 1
 volatile uint8_t servo_state_target[NO_SERVOS] = {0,}; // used in ISR !
 volatile uint8_t servo_state_current[NO_SERVOS] = {0,}; // used in ISR !
@@ -76,6 +78,10 @@ uint8_t servo_get_output_state(uint8_t num) {
 			// servo_state[num] = 0;
 			return 0;
 	}
+	// save last position for change detection
+	servo_state_target[num] &= ~(  3 << 5);
+	servo_state_target[num] |=  (tmp << 5);
+	return 0;
 }
 
 // get virtual inputs for one serfo from real inputs
@@ -93,7 +99,7 @@ uint8_t servo_get_mapped_input(uint8_t num) {
 	uint8_t first_input_num = config_servo_input_map[num];
 	// check valid range 1-15 (1 means real inputs 0,1; 15 means real inputs 14,15)
 	if ((first_input_num > 0) && (first_input_num < NO_INPUTS)) {
-		first_input_num--; // rean inputs count from 1 (0 means no map)
+		first_input_num--; // real inputs count from 1 (0 means no map)
 		return (inputs_logic_state >> first_input_num) & 3;
 	} else {
 		return 0; // no mapped input
@@ -117,6 +123,7 @@ void servo_set_input_state(uint8_t num) {
 			inpstate = (servo_state_current[num] & 3);
 		}
 	}
+
 	servos_inputs_state &= ~(3 << (num*2)); // mask old state
 	servos_inputs_state |=  (inpstate << (num*2)); // write current state
 }
@@ -262,7 +269,7 @@ void servo_update(void) {
 					}
 				}
 
-				if ((state < 8) && (servo_timeout[i] == 0)) {
+				if (((state & 0x10) == 0) && (servo_timeout[i] == 0)) {
 					speed = servo_get_config_speed(i);
 					int16_t diff = ( servo_pos[i] - pos_end);
 					int16_t absdiff = (diff > 0) ? diff : -diff;
