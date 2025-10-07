@@ -31,19 +31,29 @@ void outputs_apply_state() {
 	if (!outputs_need_apply)
 		return;
 	outputs_need_apply = false;
-	for (int i = 0; i < NO_OUTPUTS; i++) {
-		_flicker_enabled[i] = ((_outputs_state[i] & 0xC0) == 0x40) ? true : false;
+
+	uint16_t plain_mask = 0;
+	uint16_t plain_state = 0;
+
+	for (int i = NO_OUTPUTS-1; i >= 0; i--) {
+		plain_mask <<= 1;
+		plain_state <<= 1;
+
+		_flicker_enabled[i] = ((_outputs_state[i] & 0xC0) == 0x40);
 		if (!_flicker_enabled[i]) {
 			_flicker_counters[i] = 0;
 			if (_outputs_state[i] & 0x80) { // S-COM
 				scom_output(i, _outputs_state[i] & 0x7F);
 			} else { // plain output
-				//scom_disable_output(i);
 				scom_output(i, -1);
-				io_set_output_raw(i, _outputs_state[i]);
+				plain_mask |= 1;
+				if (_outputs_state[i] & 1)
+					plain_state |= 1;
 			}
 		}
 	}
+
+	io_set_outputs_raw_mask(plain_state, plain_mask);
 }
 
 void outputs_set_zipped(uint8_t data[], size_t length) {
