@@ -682,11 +682,9 @@ void send_diag_value(uint8_t i) {
 		break;
 
 	case MTBBUS_DV_VMCU:
-		// DEVEL - DEBUG
 		mtbbus_output_buf[0] = 2+2;
-		mtbbus_output_buf[3] = servo_state_target[0];
-		mtbbus_output_buf[4] = servo_state_current[0];
-
+		mtbbus_output_buf[3] = vcc_voltage >> 8;
+		mtbbus_output_buf[4] = vcc_voltage & 0xFF;
 		break;
 
 	case MTBBUS_DV_MTBBUS_RECEIVED:
