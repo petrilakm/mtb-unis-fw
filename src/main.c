@@ -301,6 +301,7 @@ ISR(TIMER2_COMP_vect) {
 	if (inputs_debounce_to_update) // debouncing was not executed since last call -> emit warning
 		mtbbus_warn_flags.bits.missed_timer = true;
 	inputs_debounce_to_update = true;
+
 	if ((++timer_0) > TIMER_0_MAX) {
 		timer_0 = 0;
 		// Timer 100 Hz (period 10 ms)
@@ -312,13 +313,11 @@ ISR(TIMER2_COMP_vect) {
 
 ISR(TIMER0_COMP_vect) {
 	// must be empty, used in libmtb
-
 }
 
 ISR(TIMER1_COMPA_vect) {
 	// must be empty, because bootloader start timer and ISR !
 }
-
 
 ISR(TIMER3_COMPA_vect) {
 	// must be empty, because bootloader start timer and ISR !
@@ -335,6 +334,7 @@ ISR(TIMER1_CAPT_vect) {
 		}
 	}
 }
+
 ISR(TIMER3_CAPT_vect) {
 	uint8_t i;
 	for (i=3; i<6; i++) {
@@ -345,11 +345,6 @@ ISR(TIMER3_CAPT_vect) {
 		}
 	}
 }
-///////////////////////////////////////////////////////////////////////////////
-
-
-
-///////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////
 
