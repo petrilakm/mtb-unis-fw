@@ -298,6 +298,8 @@ static void on_initialized(void) {
 
 ISR(TIMER2_COMP_vect) {
 	// Timer 2 @ 2 kHz (period 500 us)
+	if (inputs_debounce_to_update) // debouncing was not executed since last call -> emit warning
+		mtbbus_warn_flags.bits.missed_timer = true;
 	inputs_debounce_to_update = true;
 	if ((++timer_0) > TIMER_0_MAX) {
 		timer_0 = 0;
