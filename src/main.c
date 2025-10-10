@@ -302,9 +302,9 @@ ISR(TIMER2_COMP_vect) {
 	if ((++timer_0) > TIMER_0_MAX) {
 		timer_0 = 0;
 		// Timer 100 Hz (period 10 ms)
-		t3_elapsed = true;
-		if (TCNT0 > 0)
+		if (t3_elapsed) // timer 3 was not processed since last call -> emit warning
 			mtbbus_warn_flags.bits.missed_timer = true;
+		t3_elapsed = true;
 	}
 }
 
