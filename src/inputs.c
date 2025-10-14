@@ -19,7 +19,7 @@ uint8_t _inputs_fall_counter[NO_INPUTS] = {0, };
 uint8_t _btn_debounce_counter = 0;
  // button long press > 2 s
 #define BTN_PRESSED_THRESHOLD (200)
-uint16_t _btn_pressed_counter = 0;
+uint8_t _btn_pressed_counter = 0;
 
 
 static void _inputs_button_debounce_update();
