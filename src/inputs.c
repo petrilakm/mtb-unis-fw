@@ -71,12 +71,12 @@ void inputs_fall_update(void) {
     }
   }
 
-  // button handling  
+  // button handling
   // determine if press is short or long
   if (btn_pressed) {
-    if (!io_button_long_pressed) {
+    if (_btn_pressed_counter < BTN_PRESSED_THRESHOLD) {
       _btn_pressed_counter++;
-      if (_btn_pressed_counter > BTN_PRESSED_THRESHOLD) {
+      if (_btn_pressed_counter == BTN_PRESSED_THRESHOLD) {
         io_button_long_pressed = true;
       }
     }
