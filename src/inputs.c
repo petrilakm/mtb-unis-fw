@@ -93,7 +93,7 @@ static void _inputs_button_debounce_update(void) {
     // released
     if (_btn_debounce_counter > 0) {
       _btn_debounce_counter--;
-      if ((_btn_debounce_counter) == 0 && (btn_pressed)) {
+      if ((_btn_debounce_counter == 0) && (btn_pressed)) {
         btn_pressed = false;
         if (_btn_pressed_counter < BTN_PRESSED_THRESHOLD) {
           io_button_short_pressed = true;
