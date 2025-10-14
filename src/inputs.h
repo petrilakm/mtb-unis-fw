@@ -22,7 +22,8 @@ extern uint16_t inputs_old;
 // This function should be called each 100 us
 void inputs_debounce_update(void);
 
-// This function should be called each 10 ms
+// These functions should be called each 10 ms
 void inputs_fall_update(void);
+void button_long_press_detect_update(void);
 
 #endif

@@ -130,6 +130,7 @@ static void timer_100hz(void) {
 	servo_update();
 	outputs_update();
 	inputs_fall_update();
+	button_long_press_detect_update();
 	handle_timers();
 	update_button();
 	if ((++timer_diag) > 10) {

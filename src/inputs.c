@@ -62,7 +62,7 @@ void inputs_debounce_update(void) {
 }
 
 void inputs_fall_update(void) {
-  // 100 Hz
+  // Called at 100 Hz (each 10 ms)
   for (size_t i = 0; i < NO_INPUTS; i++) {
     if (_inputs_fall_counter[i] > 0) {
       _inputs_fall_counter[i]--;
@@ -70,8 +70,10 @@ void inputs_fall_update(void) {
         inputs_logic_state &= ~(1 << i);
     }
   }
+}
 
-  // button handling
+void button_long_press_detect_update(void) {
+  // Called at 100 Hz (each 10 ms)
   // determine if press is short or long
   if (btn_pressed) {
     if (_btn_pressed_counter < BTN_PRESSED_THRESHOLD) {
@@ -83,7 +85,6 @@ void inputs_fall_update(void) {
    } else {
     _btn_pressed_counter = 0;
   }
-
 }
 
 static void _inputs_button_debounce_update(void) {
