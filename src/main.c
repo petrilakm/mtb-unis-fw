@@ -298,25 +298,26 @@ static void on_initialized(void) {
 
 ISR(TIMER2_COMP_vect) {
 	// Timer 2 @ 2 kHz (period 500 us)
+	if (inputs_debounce_to_update) // debouncing was not executed since last call -> emit warning
+		mtbbus_warn_flags.bits.missed_timer = true;
 	inputs_debounce_to_update = true;
+
 	if ((++timer_0) > TIMER_0_MAX) {
 		timer_0 = 0;
 		// Timer 100 Hz (period 10 ms)
-		t3_elapsed = true;
-		if (TCNT0 > 0)
+		if (t3_elapsed) // timer 3 was not processed since last call -> emit warning
 			mtbbus_warn_flags.bits.missed_timer = true;
+		t3_elapsed = true;
 	}
 }
 
 ISR(TIMER0_COMP_vect) {
 	// must be empty, used in libmtb
-
 }
 
 ISR(TIMER1_COMPA_vect) {
 	// must be empty, because bootloader start timer and ISR !
 }
-
 
 ISR(TIMER3_COMPA_vect) {
 	// must be empty, because bootloader start timer and ISR !
@@ -333,6 +334,7 @@ ISR(TIMER1_CAPT_vect) {
 		}
 	}
 }
+
 ISR(TIMER3_CAPT_vect) {
 	uint8_t i;
 	for (i=3; i<6; i++) {
@@ -343,11 +345,6 @@ ISR(TIMER3_CAPT_vect) {
 		}
 	}
 }
-///////////////////////////////////////////////////////////////////////////////
-
-
-
-///////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -685,11 +682,9 @@ void send_diag_value(uint8_t i) {
 		break;
 
 	case MTBBUS_DV_VMCU:
-		// DEVEL - DEBUG
 		mtbbus_output_buf[0] = 2+2;
-		mtbbus_output_buf[3] = servo_state_target[0];
-		mtbbus_output_buf[4] = servo_state_current[0];
-
+		mtbbus_output_buf[3] = vcc_voltage >> 8;
+		mtbbus_output_buf[4] = vcc_voltage & 0xFF;
 		break;
 
 	case MTBBUS_DV_MTBBUS_RECEIVED:
