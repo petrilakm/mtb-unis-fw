@@ -35,7 +35,7 @@ void set_address(uint8_t address);
 
 #define CONFIG_MODULE_TYPE 0x50
 #define CONFIG_FW_MAJOR 2
-#define CONFIG_FW_MINOR 0
+#define CONFIG_FW_MINOR 1
 #define CONFIG_PROTO_MAJOR 4
 #define CONFIG_PROTO_MINOR 1
 #define CONFIG_EEPROM_VERSION (03)

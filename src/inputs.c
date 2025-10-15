@@ -19,7 +19,7 @@ uint8_t _inputs_fall_counter[NO_INPUTS] = {0, };
 uint8_t _btn_debounce_counter = 0;
  // button long press > 2 s
 #define BTN_PRESSED_THRESHOLD (200)
-uint16_t _btn_pressed_counter = 0;
+uint8_t _btn_pressed_counter = 0;
 
 
 static void _inputs_button_debounce_update();
@@ -62,7 +62,7 @@ void inputs_debounce_update(void) {
 }
 
 void inputs_fall_update(void) {
-  // 100 Hz
+  // Called at 100 Hz (each 10 ms)
   for (size_t i = 0; i < NO_INPUTS; i++) {
     if (_inputs_fall_counter[i] > 0) {
       _inputs_fall_counter[i]--;
@@ -70,20 +70,21 @@ void inputs_fall_update(void) {
         inputs_logic_state &= ~(1 << i);
     }
   }
+}
 
-  // button handling  
+void button_long_press_detect_update(void) {
+  // Called at 100 Hz (each 10 ms)
   // determine if press is short or long
   if (btn_pressed) {
-    if (!io_button_long_pressed) {
+    if (_btn_pressed_counter < BTN_PRESSED_THRESHOLD) {
       _btn_pressed_counter++;
-      if (_btn_pressed_counter > BTN_PRESSED_THRESHOLD) {
+      if (_btn_pressed_counter == BTN_PRESSED_THRESHOLD) {
         io_button_long_pressed = true;
       }
     }
    } else {
     _btn_pressed_counter = 0;
   }
-
 }
 
 static void _inputs_button_debounce_update(void) {
@@ -92,7 +93,7 @@ static void _inputs_button_debounce_update(void) {
     // released
     if (_btn_debounce_counter > 0) {
       _btn_debounce_counter--;
-      if ((_btn_debounce_counter) == 0 && (btn_pressed)) {
+      if ((_btn_debounce_counter == 0) && (btn_pressed)) {
         btn_pressed = false;
         if (_btn_pressed_counter < BTN_PRESSED_THRESHOLD) {
           io_button_short_pressed = true;
