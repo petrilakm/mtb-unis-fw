@@ -60,8 +60,8 @@ void outputs_set_zipped(uint8_t data[], size_t length) {
 	if (length < 6)
 		return;
 
-	uint32_t full_mask = ((uint32_t) data[3] << 24) | ((uint32_t) data[2] << 16) | (data[1] << 8) | data[0];
-	uint32_t bin_state = ((uint32_t) data[7] << 24) | ((uint32_t) data[6] << 16) | (data[5] << 8) | data[4];
+	uint32_t full_mask = (((uint32_t)data[3]) << 24) | (((uint32_t)data[2]) << 16) | (((uint32_t)data[1]) << 8) | data[0];
+	uint32_t bin_state = (((uint32_t)data[7]) << 24) | (((uint32_t)data[6]) << 16) | (((uint32_t)data[5]) << 8) | data[4];
 	size_t bytei = 8;
 
 	for (uint8_t i = 0; i < NO_OUTPUTS_ALL; i++) {
