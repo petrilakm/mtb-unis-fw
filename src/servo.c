@@ -203,98 +203,92 @@ void servo_update(void) {
 	uint8_t speed = 0;
 	uint16_t pos_end = (100<<5);
 
-	postdiv2--;
-	if (postdiv2 == 0) {
-		postdiv2 = 2;
-		// 50 Hz
+	servo_get_output_state(servo_cnt); // get requested position (servo_input <- MTB output)
+	servo_set_input_state(servo_cnt); // return current position (servo_output -> MTB input)
 
-		servo_get_output_state(servo_cnt); // get requested position (servo_input <- MTB output)
-		servo_set_input_state(servo_cnt); // return current position (servo_output -> MTB input)
+	servo_cnt++; // cycle all servos
+	if (servo_cnt>5) servo_cnt=0;
 
-		servo_cnt++; // cycle all servos
-		if (servo_cnt>5) servo_cnt=0;
-
-		// on deselect manual servo
-		// return manual positioned servo to right location
-		if (servo_test_select_last != servo_test_select) {
-			servo_state_target[servo_test_select_last] &= ~16;  // enable servo signal
-			servo_timeout[servo_test_select_last] = 0; // reset timeout for servo operation
-			servo_test_timeout = SERVO_TEST_TIMEOUT_MAX;  // reset timeout for manual positioning end
-			if (servo_test_select < NO_SERVOS) {
-				servo_state_target[servo_test_select] &= ~16;  // enable servo signal for new servo
-				servo_timeout[servo_test_select] = 0; // reset timeout for servo operation
-			}
-			servo_test_select_last = servo_test_select;
+	// on deselect manual servo
+	// return manual positioned servo to right location
+	if (servo_test_select_last != servo_test_select) {
+		servo_state_target[servo_test_select_last] &= ~16;  // enable servo signal
+		servo_timeout[servo_test_select_last] = 0; // reset timeout for servo operation
+		servo_test_timeout = SERVO_TEST_TIMEOUT_MAX;  // reset timeout for manual positioning end
+		if (servo_test_select < NO_SERVOS) {
+			servo_state_target[servo_test_select] &= ~16;  // enable servo signal for new servo
+			servo_timeout[servo_test_select] = 0; // reset timeout for servo operation
 		}
-		// measure timeout of manual positioning end
-		if (servo_test_timeout > 0) {
-			servo_test_timeout--;
-			if (servo_test_timeout == 0) {
-				// end of manual mode, return to normal mode
-				servo_state_target[servo_test_select] &= ~16;  // enable servo signal, servo must return to defined position
-				servo_timeout[servo_test_select] = 50; // reset timeout for servo operation
-				servo_test_select = 255; // deselect manual servo
-			}
+		servo_test_select_last = servo_test_select;
+	}
+	// measure timeout of manual positioning end
+	if (servo_test_timeout > 0) {
+		servo_test_timeout--;
+		if (servo_test_timeout == 0) {
+			// end of manual mode, return to normal mode
+			servo_state_target[servo_test_select] &= ~16;  // enable servo signal, servo must return to defined position
+			servo_timeout[servo_test_select] = 50; // reset timeout for servo operation
+			servo_test_select = 255; // deselect manual servo
 		}
+	}
 
-		// for each servo
-		//for(i=0; i<NO_SERVOS; i++) { // too long - changed to cooperative task
-		i = servo_cnt;
-			// only enabled servos
-			if (((servo_enabled >> i) & 1) > 0) {
-				state = servo_state_target[i];
-				if (i == servo_test_select) {
-					// servo in manual mode:
-					//set current position (controled in interupt via received commands)
-					pos_end = (servo_test_pos+SERVO_OFFSET_POS) << 5; // set manual position
+	// for each servo
+	//for(i=0; i<NO_SERVOS; i++) { // too long - changed to cooperative task
+	i = servo_cnt;
+		// only enabled servos
+		if (((servo_enabled >> i) & 1) > 0) {
+			state = servo_state_target[i];
+			if (i == servo_test_select) {
+				// servo in manual mode:
+				//set current position (controled in interupt via received commands)
+				pos_end = (servo_test_pos+SERVO_OFFSET_POS) << 5; // set manual position
 
-					// if manual position changed
-					if (servo_test_pos != servo_test_pos_last) {
-						servo_test_pos_last = servo_test_pos; // save last command
-						servo_state_target[i] &= ~0x10;  // enable servo signal
-						servo_timeout[i] = 0; // reset timeout for servo operation
-						servo_test_timeout = SERVO_TEST_TIMEOUT_MAX;  // reset timeout for manual positioning end
-					}
-				} else {
-					// normal operation
-					pos_end = servo_get_config_position(i, state & 0x03);
-				}
-				//state = servo_state_target[i];
-
-				// measure timeout for one servo signal
-				if (servo_timeout[i] > 0) {
-					servo_timeout[i]--;
-					if (servo_timeout[i] == 0) {
-						servo_state_target[i] |= 0x10; // timeout elapsed, stop servo signal
-					}
-				}
-
-				if (((state & 0x10) == 0) && (servo_timeout[i] == 0)) {
-					speed = servo_get_config_speed(i);
-					int16_t diff = ( servo_pos[i] - pos_end);
-					int16_t absdiff = (diff > 0) ? diff : -diff;
-					if ((absdiff) < speed) {
-						// end position
-						servo_pos[i] = pos_end; // move any remaining angle
-						servo_timeout[i] = SERVO_TIMEOUT_MAX;
-						servo_running[i] = false;
-						servo_state_current[i] = servo_state_target[i]; // propagate position change to simulate end-switches
-					} else {
-						if (diff > 0) {
-							servo_pos[i] -= speed; // change current angle
-						}
-						if (diff < 0) {
-							servo_pos[i] += speed; // change current angle
-						}
-						servo_running[i] = true;
-					}
-					servo_set_raw(i, servo_pos[i]);
+				// if manual position changed
+				if (servo_test_pos != servo_test_pos_last) {
+					servo_test_pos_last = servo_test_pos; // save last command
+					servo_state_target[i] &= ~0x10;  // enable servo signal
+					servo_timeout[i] = 0; // reset timeout for servo operation
+					servo_test_timeout = SERVO_TEST_TIMEOUT_MAX;  // reset timeout for manual positioning end
 				}
 			} else {
-				servo_state_target[i] |= 16; // disable unused servo
+				// normal operation
+				pos_end = servo_get_config_position(i, state & 0x03);
 			}
-		//} for each servo - now cooperative task
-	}
+			//state = servo_state_target[i];
+
+			// measure timeout for one servo signal
+			if (servo_timeout[i] > 0) {
+				servo_timeout[i]--;
+				if (servo_timeout[i] == 0) {
+					servo_state_target[i] |= 0x10; // timeout elapsed, stop servo signal
+				}
+			}
+
+			if (((state & 0x10) == 0) && (servo_timeout[i] == 0)) {
+				speed = servo_get_config_speed(i);
+				int16_t diff = ( servo_pos[i] - pos_end);
+				int16_t absdiff = (diff > 0) ? diff : -diff;
+				if ((absdiff) < speed) {
+					// end position
+					servo_pos[i] = pos_end; // move any remaining angle
+					servo_timeout[i] = SERVO_TIMEOUT_MAX;
+					servo_running[i] = false;
+					servo_state_current[i] = servo_state_target[i]; // propagate position change to simulate end-switches
+				} else {
+					if (diff > 0) {
+						servo_pos[i] -= speed; // change current angle
+					}
+					if (diff < 0) {
+						servo_pos[i] += speed; // change current angle
+					}
+					servo_running[i] = true;
+				}
+				servo_set_raw(i, servo_pos[i]);
+			}
+		} else {
+			servo_state_target[i] |= 16; // disable unused servo
+		}
+	//} for each servo - now cooperative task
 }
 
 void servo_set_enable_one(uint8_t servo, bool state)
