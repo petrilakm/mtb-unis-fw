@@ -14,6 +14,8 @@
 
 #define SERVO_OFFSET_POS (46)
 
+#define SERVO_FLAG_SLEEP (0x10)
+
 extern volatile uint8_t servo_state_target[NO_SERVOS];
 extern volatile uint8_t servo_state_current[NO_SERVOS];
 extern uint8_t servo_running[NO_SERVOS];

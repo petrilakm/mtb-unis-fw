@@ -57,6 +57,7 @@ uint8_t servo_get_output_state(uint8_t num) {
 	}
 	uint8_t tmp;
 	// get only 2 bits from input vector
+	// servo virtual output is after 16 real output
 	tmp  = _outputs_state[16+num*2+0] << 0; // pos A output
 	tmp |= _outputs_state[16+num*2+1] << 1; // pos B output
 	//tmp = ((servos_outputs_state >> (num*2)) & 0x03);
@@ -190,16 +191,16 @@ void servo_init_position(uint8_t servo) {
 		servo_set_raw(servo, servo_pos[servo]);
 	} else {
 		// disable unused servo
-		servo_state_target[servo] |= 0x10;
-		servo_state_current[servo] |= 0x10;
+		servo_state_target[servo] |= SERVO_FLAG_SLEEP;
+		servo_state_current[servo] |= SERVO_FLAG_SLEEP;
 	}
 }
 
 void servo_update(void) {
 	static uint8_t servo_cnt = 0;
 
-	servo_get_output_state(i); // get requested position (servo_input <- MTB output)
-	servo_set_input_state(i); // return current position (servo_output -> MTB input)
+	servo_get_output_state(servo_cnt); // get requested position (servo_input <- MTB output)
+	servo_set_input_state(servo_cnt); // return current position (servo_output -> MTB input)
 
 	servo_cnt++; // cycle all servos
 	if (servo_cnt >= NO_SERVOS) servo_cnt = 0;
@@ -207,11 +208,11 @@ void servo_update(void) {
 	// on deselect manual servo
 	// return manual positioned servo to right location
 	if (servo_test_select_last != servo_test_select) {
-		servo_state_target[servo_test_select_last] &= ~16;  // enable servo signal
+		servo_state_target[servo_test_select_last] &= ~SERVO_FLAG_SLEEP;  // enable servo signal
 		servo_timeout[servo_test_select_last] = 0; // reset timeout for servo operation
 		servo_test_timeout = SERVO_TEST_TIMEOUT_MAX;  // reset timeout for manual positioning end
 		if (servo_test_select < NO_SERVOS) {
-			servo_state_target[servo_test_select] &= ~16;  // enable servo signal for new servo
+			servo_state_target[servo_test_select] &= ~SERVO_FLAG_SLEEP;  // enable servo signal for new servo
 			servo_timeout[servo_test_select] = 0; // reset timeout for servo operation
 		}
 		servo_test_select_last = servo_test_select;
@@ -221,7 +222,7 @@ void servo_update(void) {
 		servo_test_timeout--;
 		if (servo_test_timeout == 0) {
 			// end of manual mode, return to normal mode
-			servo_state_target[servo_test_select] &= ~16;  // enable servo signal, servo must return to defined position
+			servo_state_target[servo_test_select] &= ~SERVO_FLAG_SLEEP;  // enable servo signal, servo must return to defined position
 			servo_timeout[servo_test_select] = 50; // reset timeout for servo operation
 			servo_test_select = 255; // deselect manual servo
 		}
@@ -237,7 +238,7 @@ void servo_update(void) {
 		// variable for end position
 		uint16_t pos_end;
 
-		if (i == servo_test_select) {
+		if (servo_cnt == servo_test_select) {
 			// servo in manual mode:
 			//set current position (controled in interupt via received commands)
 			pos_end = (servo_test_pos+SERVO_OFFSET_POS) << 5; // set manual position
@@ -245,7 +246,7 @@ void servo_update(void) {
 			// if manual position changed
 			if (servo_test_pos != servo_test_pos_last) {
 				servo_test_pos_last = servo_test_pos; // save last command
-				servo_state_target[s] &= ~0x10;  // enable servo signal
+				servo_state_target[s] &= ~SERVO_FLAG_SLEEP;  // wake-up servo
 				servo_timeout[s] = 0; // reset timeout for servo operation
 				servo_test_timeout = SERVO_TEST_TIMEOUT_MAX;  // reset timeout for manual positioning end
 			}
@@ -259,12 +260,12 @@ void servo_update(void) {
 		if (servo_timeout[s] > 0) {
 			servo_timeout[s]--;
 			if (servo_timeout[s] == 0) {
-				servo_state_target[s] |= 0x10; // timeout elapsed, stop servo signal
+				servo_state_target[s] |= SERVO_FLAG_SLEEP; // timeout elapsed, stop servo signal
 			}
 		}
 
-		// if servo is in moving state
-		if (((state & 0x10) == 0) && (servo_timeout[s] == 0)) {
+		// if servo is not sleeping
+		if (((state & SERVO_FLAG_SLEEP) == 0) && (servo_timeout[s] == 0)) {
 			// get configured speed
 			uint8_t speed = servo_get_config_speed(s);
 			// compute remaining position error
@@ -290,7 +291,7 @@ void servo_update(void) {
 			servo_set_raw(s, servo_pos[s]);
 		}
 	} else {
-		servo_state_target[s] |= 16; // disable unused servo
+		servo_state_target[s] |= SERVO_FLAG_SLEEP; // disable unused servo
 	}
 }
 
