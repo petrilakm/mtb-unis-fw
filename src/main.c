@@ -328,7 +328,7 @@ ISR(TIMER3_COMPA_vect) {
 ISR(TIMER1_CAPT_vect) {
 	uint8_t i;
 	for (i=0; i<3; i++) {
-		if ((servo_state_target[i] & 0x10) > 0) {
+		if ((servo_state_target[i] & SERVO_FLAG_SLEEP) > 0) {
 			servo_set_enable_one(i, false);
 		} else {
 			servo_set_enable_one(i, true);
@@ -339,7 +339,7 @@ ISR(TIMER1_CAPT_vect) {
 ISR(TIMER3_CAPT_vect) {
 	uint8_t i;
 	for (i=3; i<6; i++) {
-		if ((servo_state_target[i] & 0x10) > 0) {
+		if ((servo_state_target[i] & SERVO_FLAG_SLEEP) > 0) {
 			servo_set_enable_one(i, false);
 		} else {
 			servo_set_enable_one(i, true);
