@@ -1,10 +1,12 @@
 #include "synctimer.h"
 #include "common.h"
+#include "scom.h"
 
 unsigned long int synct_count_internal; // phase accumulator
 int synct_count;
 int synct_speed;
 bool synct_event_pass;
+bool synct_event_pre;
 
 // list of events
 synct_event_t synct_list_event[16];
@@ -40,6 +42,7 @@ void synct_init()
 		synct_list_event[i] = (synct_event_t) 0;
 	}
 	synct_event_pass = false;
+	synct_event_pre = false;
 }
 
 // rollover over the top
@@ -47,14 +50,17 @@ void synct_reset()
 {
 	synct_count_internal = 0;
 	synct_event_pass = false;
+	synct_event_pre = false;
 
 	
 	// call all subscribed events
+	/*
 	for(uint8_t i = 0; i < 16; i++) {
 		if (synct_list_event[i] != (synct_event_t) 0) {
 			(synct_list_event[i])();
 		}
 	}
+	*/
 }
 
 // timer ticking (each 10 ms)
@@ -62,18 +68,23 @@ void synct_tick() // call each 10 ms;
 {
 	synct_count_internal += synct_speed;
 	
+	if ((synct_count_internal > (SYNCT_WAIT)) && (!synct_event_pre)) {
+		synct_event_pre = true;
+		scom_sync_event_pre();
+	}
+
 	if (synct_count_internal > (SYNCT_MAX)) {
 		synct_reset();
+		scom_sync_event();
 	}
-	
+
 	synct_count = (synct_count_internal >> 8);
-	
+
 	// check if event occur
 	if ((!synct_event_pass) && (synct_count > 50)) {
 		synct_event_pass = true;
 
 	}
-	
 }
 
 // timer sync (each 5 sec external event)

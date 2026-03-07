@@ -15,9 +15,8 @@
 #include "io.h"
 #include "config.h"
 
-//#define SYNCT_MAX  (64000)
-#define SYNCT_MAX  (80000)
-//#define SYNCT_WAIT (10000)
+#define SYNCT_MAX  (60900)
+#define SYNCT_WAIT (48000)
 
 typedef void (*synct_event_t)(void);
 

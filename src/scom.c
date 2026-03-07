@@ -6,8 +6,8 @@
 int8_t _codes[NO_OUTPUTS]; // -1 = not coding anything
 int8_t _codes_new[NO_OUTPUTS];
 uint8_t _phase = 0;
-bool scom_sync = false;  // "sync" request
-bool scom_sync2= false;  // synchronized "sync" data frame transmit
+bool scom_sync_sync = false;  // "sync" request
+bool scom_sync_wait = false;  // dont't send regulat scom code, wait for sync
 
 #define SCOM_PHASE_STARTBIT1 (0)
 #define SCOM_PHASE_STARTBIT2 (1)
@@ -19,20 +19,19 @@ bool scom_sync2= false;  // synchronized "sync" data frame transmit
 #define SCOM_PHASE_BIT5      (7)
 #define SCOM_PHASE_BIT6      (8)
 #define SCOM_PHASE_STOPBIT   (9)
-#define SCOM_PHASE_END      (200)
+#define SCOM_PHASE_END      (30)
 
 void scom_init(void) {
 	scom_reset();
-	synct_event_add(scom_sync_event);
+//	synct_event_add(scom_sync_event);
 }
 
 void scom_update(void) {
 	uint16_t outputs = 0;
 	uint16_t mask = 0;
 
-	if (_phase == SCOM_PHASE_STARTBIT2) {
-		scom_sync2 = scom_sync; // synchro sync variable
-		scom_sync = false;
+	if ((_phase == 0) && (scom_sync_wait)) {
+		return;
 	}
 
 	if (_phase <= SCOM_PHASE_STOPBIT+1) {
@@ -45,12 +44,13 @@ void scom_update(void) {
 
 			if (_phase == SCOM_PHASE_STARTBIT1 || _phase == SCOM_PHASE_STOPBIT) {
 				outputs |= 1;
-			}else if ((_phase == SCOM_PHASE_BIT5) && (scom_sync2)) {
-				outputs |= 1;
-			} else if ((_phase >= SCOM_PHASE_BIT0) && (_phase <= SCOM_PHASE_BIT6) && (!scom_sync2)) {
+			} else if ((_phase >= SCOM_PHASE_BIT0) && (_phase <= SCOM_PHASE_BIT6)) {
 				uint8_t biti = _phase - SCOM_PHASE_BIT0;
 				if (((_codes[i] >> biti) & 0x1) == 0) {
 					outputs |= 1;
+				}
+				if ((scom_sync_sync) && (biti == 6)) {
+					outputs &= ~1;
 				}
 			}
 		}
@@ -62,7 +62,7 @@ void scom_update(void) {
 	if (_phase >= SCOM_PHASE_END) {
 		_phase = 0;
 		memcpy((int8_t*)_codes, (int8_t*)_codes_new, NO_OUTPUTS);
-		scom_sync2 = false;
+		scom_sync_sync = false;
 	}
 }
 
@@ -89,8 +89,13 @@ void scom_disable_output(uint8_t output) {
 }
 
 void scom_sync_event(void) {
-	scom_sync = true;
+	scom_sync_sync = true;
+	scom_sync_wait = false;
 	led_red_ok();
+}
+
+void scom_sync_event_pre(void) {
+	scom_sync_wait = true;
 }
 
 inline bool scom_is_output(uint8_t output) {
