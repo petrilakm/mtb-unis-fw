@@ -15,14 +15,18 @@
 #include "io.h"
 #include "config.h"
 
+//#define SYNCT_MAX  (64000)
+#define SYNCT_MAX  (80000)
+//#define SYNCT_WAIT (10000)
+
 typedef void (*synct_event_t)(void);
 
 extern int synct_count;
 void synct_event_add(synct_event_t);
 void synct_event_remove(synct_event_t);
 void synct_init();
-void synct_tick(); // call each 10 ms;
-void synct_sync(); // bus-sync
+void synct_tick(); // call each 10 ms (internal;
+void synct_sync(); // bus-sync (each 5 seconds external)
 
 
 #endif

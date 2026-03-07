@@ -4,7 +4,7 @@ FUSES = -U lfuse:w:0x3E:m -U hfuse:w:0xC0:m -U efuse:w:0xFF:m -U lock:w:0xEF:m
 F_CPU = 14745600
 FORMAT = ihex
 BUILDDIR = build
-TARGET = $(BUILDDIR)/mtb-unis-v2.2
+TARGET = $(BUILDDIR)/mtb-unis-v2.3_test
 OBJDIR = obj
 SRC = $(wildcard src/*.c) $(wildcard lib/*.c)
 OPT = 2
@@ -27,10 +27,12 @@ LDFLAGS += -Wl,-section-start=.fwattr=$(CRC_POS)
 #---------------- Programming Options (avrdude) ----------------
 
 AVRDUDE_PROGRAMMER = stk500
+AVRDUDE_PROGRAMMER = usbasp
 AVRDUDE_PORT = /dev/ttyUSB0
 AVRDUDE_WRITE_FLASH = -U flash:w:$(TARGET)_with_bootloader.hex
 AVRDUDE_WRITE_EEPROM = -U eeprom:w:$(TARGET).eep
-AVRDUDE_FLAGS = -p $(MCU) -P $(AVRDUDE_PORT) -c $(AVRDUDE_PROGRAMMER)
+#AVRDUDE_FLAGS = -p $(MCU) -P $(AVRDUDE_PORT) -c $(AVRDUDE_PROGRAMMER)
+AVRDUDE_FLAGS = -p $(MCU) -c $(AVRDUDE_PROGRAMMER)
 
 #============================================================================
 
@@ -41,7 +43,7 @@ OBJDUMP = avr-objdump
 SIZE = avr-size
 AR = avr-ar rcs
 NM = avr-nm
-AVRDUDE = avrdude
+AVRDUDE = avrdude.exe
 REMOVE = rm -f
 REMOVEDIR = rm -rf
 COPY = cp

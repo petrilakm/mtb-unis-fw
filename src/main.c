@@ -18,6 +18,7 @@
 #include "led.h"
 #include "servo.h"
 #include "diag.h"
+#include "synctimer.h"
 #include "../lib/mtbbus.h"
 #include "../lib/crc16modbus.h"
 
@@ -133,6 +134,7 @@ static void timer_100hz(void) {
 	button_long_press_detect_update();
 	handle_timers();
 	update_button();
+	synct_tick();
 	if ((++timer_diag) > 10) {
 		timer_diag = 0;
 		diag_update();
@@ -228,7 +230,8 @@ void init(void) {
 	led_blue_on();
 	_delay_ms(20);
 	// end of led wave
-	scom_init();
+	synct_init(); // init sync timer
+	scom_init(); // use sync timer on scom routines
 
 	// Setup timer 0 - for libmtb
 
