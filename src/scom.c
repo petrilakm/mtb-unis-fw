@@ -9,17 +9,14 @@ uint8_t _phase = 0;
 bool scom_sync_sync = false;  // "sync" request
 bool scom_sync_wait = false;  // dont't send regulat scom code, wait for sync
 
-#define SCOM_PHASE_STARTBIT1 (0)
-#define SCOM_PHASE_STARTBIT2 (1)
-#define SCOM_PHASE_BIT0      (2)
-#define SCOM_PHASE_BIT1      (3)
-#define SCOM_PHASE_BIT2      (4)
-#define SCOM_PHASE_BIT3      (5)
-#define SCOM_PHASE_BIT4      (6)
-#define SCOM_PHASE_BIT5      (7)
-#define SCOM_PHASE_BIT6      (8)
-#define SCOM_PHASE_STOPBIT   (9)
-#define SCOM_PHASE_END      (30)
+#define SCOM_SYNC_COUNTER (30)
+
+#define SCOM_PHASE_STARTBIT1 0
+#define SCOM_PHASE_STARTBIT0 1
+#define SCOM_PHASE_BIT0      2
+#define SCOM_PHASE_BIT6      8
+#define SCOM_PHASE_STOPBIT   9
+#define SCOM_PHASE_END      30
 
 void scom_init(void) {
 	scom_reset();
@@ -39,8 +36,10 @@ void scom_update(void) {
 			outputs <<= 1;
 			mask <<= 1;
 
-			if (_codes[i] > -1)
+			if (_codes[i] > -1) {
 				mask |= 1;
+				if (_sync_counter == 0) _codes[i] = 0b01111111;
+			}
 
 			if (_phase == SCOM_PHASE_STARTBIT1 || _phase == SCOM_PHASE_STOPBIT) {
 				outputs |= 1;
